@@ -1,0 +1,484 @@
+/**
+ * Kinship Family AI Game Day Stylesheet
+ * /styles/app.css
+ *
+ * Warm editorial papercraft design tokens with zero external CSS dependencies.
+ */
+
+:root {
+  --bg-primary: #fdfbf7;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f9f5f0;
+  --bg-container: #f4eee6;
+  --border-hairline: #e8ded2;
+  --border-strong: #d8c8b6;
+
+  --text-main: #1e1b18;
+  --text-muted: #6b635b;
+  --text-subtle: #968c82;
+
+  --accent-terracotta: #e06d53;
+  --accent-terracotta-soft: rgba(224, 109, 83, 0.12);
+  --accent-sage: #536251;
+  --accent-sage-soft: rgba(83, 98, 81, 0.12);
+  --accent-ochre: #dda74f;
+  --accent-ochre-soft: rgba(221, 167, 79, 0.15);
+  --accent-red: #ba1a1a;
+  --accent-green: #2e7d32;
+
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-body: "Hanken Grotesk", system-ui, -apple-system, sans-serif;
+  --font-label: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  --shadow-ambient: 0 4px 20px rgba(30, 27, 24, 0.05);
+  --shadow-elevated: 0 8px 30px rgba(30, 27, 24, 0.08);
+  --shadow-polaroid: 0 6px 18px rgba(30, 27, 24, 0.12);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.app-header {
+  padding: 1rem 2rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-hairline);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(30, 27, 24, 0.03);
+}
+
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: var(--text-main);
+}
+
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--accent-terracotta);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-family: var(--font-serif);
+}
+
+.brand-name {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.brand-tagline {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-container);
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  color: var(--accent-sage);
+  font-weight: 700;
+}
+
+/* Layout */
+.app-container {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+}
+
+/* Papercraft Cards */
+.paper-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: 1.25rem;
+  padding: 1.75rem;
+  box-shadow: var(--shadow-ambient);
+  margin-bottom: 1.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.paper-card.elevated {
+  box-shadow: var(--shadow-elevated);
+  border-color: var(--border-strong);
+}
+
+/* Hero Section */
+.hero-card {
+  background: linear-gradient(135deg, rgba(224, 109, 83, 0.07), rgba(221, 167, 79, 0.07));
+  border: 1px solid var(--border-strong);
+  border-radius: 1.25rem;
+  padding: 2.25rem 2rem;
+  margin-bottom: 2rem;
+}
+
+.hero-title {
+  font-family: var(--font-serif);
+  font-size: 2.4rem;
+  font-weight: 500;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.2;
+}
+
+.hero-description {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 720px;
+  line-height: 1.6;
+}
+
+/* Section Headlines */
+.section-headline {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-main);
+}
+
+.section-subhead {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0 0 1.25rem 0;
+}
+
+/* Buttons */
+.btn-referee-primary {
+  background: var(--accent-terracotta);
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.75rem 1.6rem;
+  font-family: var(--font-label);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.btn-referee-primary:hover {
+  background: #cb5d44;
+  transform: translateY(-1px);
+}
+
+.btn-referee-secondary {
+  background: var(--bg-surface);
+  color: var(--text-main);
+  border: 1px solid var(--border-strong);
+  border-radius: 9999px;
+  padding: 0.65rem 1.3rem;
+  font-family: var(--font-label);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: background 0.15s ease;
+}
+
+.btn-referee-secondary:hover {
+  background: var(--bg-container);
+}
+
+.btn-referee-small {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+/* Game Selection Grid */
+.game-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.game-select-card {
+  background: var(--bg-surface);
+  border: 2px solid var(--border-hairline);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.game-select-card:hover {
+  border-color: var(--accent-terracotta);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-ambient);
+}
+
+.game-select-card.active {
+  border-color: var(--accent-terracotta);
+  background: #fffbf9;
+  box-shadow: 0 0 0 1px var(--accent-terracotta);
+}
+
+.game-card-title {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0 0 0.4rem 0;
+}
+
+.game-card-tagline {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0 0 1rem 0;
+}
+
+.game-card-meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Pills & Badges */
+.pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background: var(--bg-container);
+  color: var(--text-muted);
+}
+
+.pill-tag.green {
+  background: rgba(46, 125, 50, 0.12);
+  color: var(--accent-green);
+}
+
+.pill-tag.red {
+  background: rgba(186, 26, 26, 0.12);
+  color: var(--accent-red);
+}
+
+.pill-tag.ochre {
+  background: var(--accent-ochre-soft);
+  color: #a2721e;
+}
+
+.pill-tag.terracotta {
+  background: var(--accent-terracotta-soft);
+  color: var(--accent-terracotta);
+}
+
+/* Player Management */
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.player-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-hairline);
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.75rem;
+}
+
+.player-chip-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Live Arena */
+.arena-grid {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 860px) {
+  .arena-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.arena-viewport {
+  position: relative;
+  background: #1e1b18;
+  border-radius: 1rem;
+  overflow: hidden;
+  min-height: 440px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.live-score-strip {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  background: var(--bg-container);
+  border-radius: 0.75rem;
+  margin-top: 1rem;
+}
+
+.score-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.score-cell-label {
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  color: var(--text-subtle);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.score-cell-value {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* Event Feed */
+.event-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.event-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.event-item.reversed {
+  opacity: 0.6;
+  text-decoration: line-through;
+  background: #faf8f5;
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+  font-family: var(--font-label);
+}
+
+.event-reason {
+  font-size: 0.86rem;
+  color: var(--text-main);
+  line-height: 1.4;
+}
+
+.event-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.2rem;
+}
+
+/* Polaroid Photo Evidence */
+.evidence-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.polaroid-card {
+  background: #ffffff;
+  border: 1px solid #e2d9cd;
+  border-radius: 6px;
+  padding: 10px 10px 18px 10px;
+  box-shadow: var(--shadow-polaroid);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease;
+}
+
+.polaroid-card:hover {
+  transform: rotate(-1deg) scale(1.02);
+}
+
+.polaroid-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #ece5dc;
+  border-radius: 2px;
+}
+
+.polaroid-caption {
+  margin-top: 10px;
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  color: var(--text-main);
+  line-height: 1.35;
+}
+
+.polaroid-meta {
+  margin-top: 4px;
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  color: var(--text-subtle);
+}
+
+/* Footer */
+.app-footer {
+  padding: 1.5rem 2rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-subtle);
+  border-top: 1px solid var(--border-hairline);
+  background: var(--bg-surface);
+}

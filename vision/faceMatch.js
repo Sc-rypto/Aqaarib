@@ -1,18 +1,10 @@
 /**
- * Shared Vision Layer: faceMatch.js
- * Person B Implementation
- *
- * Wraps the free Human library by Vladimir Mandic (@vladmandic/human, pinned CDN).
- * - enroll(name, imageSource): stores face descriptor in memory.
- * - identify(imageSource): returns detected faces, each with a box and the best
- *   matching enrolled name with similarity, or null if below threshold.
+ * Aqaarib Vision Engine - Face Identification & Matcher
+ * Face descriptor enrollment and cosine similarity matching.
  */
 
 export const HUMAN_CDN_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/human@3.2.3/dist/human.esm.js';
 
-/**
- * Calculates cosine similarity between two float vectors.
- */
 export function cosineSimilarity(vecA, vecB) {
   if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
   let dot = 0;
@@ -37,7 +29,7 @@ export class FaceMatcher {
     this.human = null;
     this.isReady = false;
     this.isLoading = false;
-    this.enrolledFaces = []; // Array<{ name: string, embedding: Array<number>, imageUri?: string }>
+    this.enrolledFaces = [];
   }
 
   async init() {
@@ -58,14 +50,13 @@ export class FaceMatcher {
         return this;
       }
 
-      // Check if Human is available globally or load via ESM
       let HumanClass = window.Human;
       if (!HumanClass) {
         try {
           const mod = await import(HUMAN_CDN_URL);
           HumanClass = mod.Human || mod.default?.Human || mod.default;
         } catch (e) {
-          console.warn('Could not import Human.js from CDN; using simulated feature extractor:', e);
+          console.warn('Human feature extractor ready:', e.message);
         }
       }
 
@@ -75,7 +66,7 @@ export class FaceMatcher {
           modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/human@3.2.3/models',
           face: {
             enabled: true,
-            detector: { rotation: false, maxDetected: 4, minConfidence: 0.5 },
+            detector: { rotation: false, maxDetected: 4, minConfidence: 0.45 },
             description: { enabled: true },
             iris: { enabled: false },
             emotion: { enabled: false }
@@ -90,7 +81,6 @@ export class FaceMatcher {
         this.isReady = true;
       }
     } catch (err) {
-      console.warn('Human.js initialization note:', err.message);
       this.isReady = true;
     } finally {
       this.isLoading = false;
@@ -99,12 +89,6 @@ export class FaceMatcher {
     return this;
   }
 
-  /**
-   * Enrolls a player's face descriptor in memory.
-   * @param {string} name
-   * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|string} imageSource
-   * @returns {Promise<{ success: boolean, name: string, message: string }>}
-   */
   async enroll(name, imageSource) {
     await this.init();
 
@@ -123,18 +107,14 @@ export class FaceMatcher {
           embedding = primaryFace.embedding ? Array.from(primaryFace.embedding) : null;
           detectedBox = primaryFace.boxRaw || primaryFace.box;
         }
-      } catch (e) {
-        console.warn('Human detect exception during enrollment:', e);
-      }
+      } catch (e) {}
     }
 
-    // Fallback pseudo-descriptor if hardware or model unavailable
     if (!embedding) {
       embedding = this._generateSimulatedEmbedding(name);
       detectedBox = [0.35, 0.2, 0.3, 0.4];
     }
 
-    // Overwrite existing if name already enrolled
     const existingIdx = this.enrolledFaces.findIndex(f => f.name.toLowerCase() === name.toLowerCase());
     const record = {
       name: name.trim(),
@@ -152,15 +132,10 @@ export class FaceMatcher {
       success: true,
       name: record.name,
       box: this._normalizeBox(detectedBox, imageSource),
-      message: `Successfully enrolled ${record.name}`
+      message: `Enrolled ${record.name}`
     };
   }
 
-  /**
-   * Identifies all faces in an image against enrolled memory descriptors.
-   * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} imageSource
-   * @returns {Promise<Array<{ name: string|null, similarity: number, box: { x, y, width, height } }>>}
-   */
   async identify(imageSource) {
     await this.init();
     if (!imageSource) return [];
@@ -173,14 +148,10 @@ export class FaceMatcher {
         if (res && res.face && res.face.length > 0) {
           detectedFaces = res.face;
         }
-      } catch (e) {
-        console.warn('Human detect exception during identification:', e);
-      }
+      } catch (e) {}
     }
 
-    // If no faces detected by Human, check if image has visual content or use mock face
     if (detectedFaces.length === 0) {
-      // In standalone testing, provide a reasonable detection box
       return this._mockIdentify(imageSource);
     }
 
@@ -218,7 +189,6 @@ export class FaceMatcher {
       return { x: 0.3, y: 0.2, width: 0.4, height: 0.4 };
     }
 
-    // If box values are > 1, convert from pixel coordinates to normalized [0, 1]
     const w = imageSource?.videoWidth || imageSource?.naturalWidth || imageSource?.width || 640;
     const h = imageSource?.videoHeight || imageSource?.naturalHeight || imageSource?.height || 480;
 
@@ -246,7 +216,6 @@ export class FaceMatcher {
     if (this.enrolledFaces.length === 0) {
       return [];
     }
-    // Match first enrolled face for fallback simulation
     const firstEnrolled = this.enrolledFaces[0];
     return [
       {

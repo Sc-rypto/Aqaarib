@@ -22,7 +22,7 @@ const sampleReport = createReport({
 
 const validation = validateReport(sampleReport);
 if (validation.valid) {
-  console.log('✅ Result object validation PASSED. Schema complies with frozen specification.');
+  console.log('✅ Result object validation PASSED.');
   process.exit(0);
 } else {
   console.error('❌ Result object validation FAILED:');

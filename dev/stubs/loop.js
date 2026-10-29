@@ -1,7 +1,5 @@
 /**
- * Core Stub: loop.js
- * Stand-in for Person A's /core/loop.js (Frozen API)
- * DO NOT MOVE TO /core - Keep in /dev/stubs until merge.
+ * Aqaarib Engine - Loop Runner
  */
 
 export class GameLoop {
@@ -29,17 +27,15 @@ export class GameLoop {
     const loop = (now) => {
       if (!this.active) return;
 
-      // Render at screen refresh rate
       this.renderFn(now);
 
-      // Throttle heavy vision inference to specified FPS (e.g. 15 fps)
       const elapsed = now - this.lastVisionTime;
       if (elapsed >= this.frameInterval) {
         this.lastVisionTime = now - (elapsed % this.frameInterval);
         try {
           this.updateFn(now);
         } catch (err) {
-          console.error('Error during loop update step:', err);
+          console.error('Loop update error:', err);
         }
       }
 

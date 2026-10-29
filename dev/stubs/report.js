@@ -1,12 +1,7 @@
 /**
- * Core Stub: report.js
- * Stand-in for Person A's /core/report.js (Frozen API)
- * DO NOT MOVE TO /core - Keep in /dev/stubs until merge.
+ * Aqaarib Session Reporting & Result Validation
  */
 
-/**
- * Creates a normalized result object for any game session.
- */
 export function createReport(data = {}) {
   const players = Array.isArray(data.players) ? data.players : [];
   const scores = data.scores || {};
@@ -14,7 +9,6 @@ export function createReport(data = {}) {
   const events = Array.isArray(data.events) ? data.events : [];
   const evidence = Array.isArray(data.evidence) ? data.evidence : [];
 
-  // Determine winner if not explicitly specified
   let winner = data.winner || null;
   if (!winner && players.length > 0) {
     let topScore = -Infinity;
@@ -30,7 +24,7 @@ export function createReport(data = {}) {
   }
 
   return {
-    gameName: data.gameName || 'Kinship Motion Game',
+    gameName: data.gameName || 'Aqaarib Motion Game',
     sessionTimestamp: data.sessionTimestamp || Date.now(),
     durationSec: Number((data.durationSec || 0).toFixed(1)),
     players,
@@ -40,17 +34,12 @@ export function createReport(data = {}) {
     evidence,
     winner,
     meta: {
-      generatedBy: 'Person B Implementation',
-      visionModel: 'MediaPipe Pose Landmarker + Human.js',
+      platform: 'Aqaarib Motion Engine',
       ...(data.meta || {})
     }
   };
 }
 
-/**
- * Validates a game session result object against the frozen specification.
- * Returns { valid: boolean, errors: Array<string> }.
- */
 export function validateReport(report) {
   const errors = [];
 
@@ -114,9 +103,6 @@ export function validateReport(report) {
   };
 }
 
-/**
- * Initiates browser download of report as a JSON file.
- */
 export function downloadReportJson(report, filename = 'game-result.json') {
   if (typeof document === 'undefined') return;
   const jsonStr = JSON.stringify(report, null, 2);

@@ -1,18 +1,6 @@
 /**
- * Red Light, Green Light - Pure Game Logic
- * Person B Implementation
- *
- * Rules:
- * - Green: walk
- * - Yellow: slow motion only (cap = 40% walking speed)
- * - Red: freeze (limit = max(3 * noiseFloor, 8% walking speed))
- * - Grace: 0.5s after any light change
- * - Violations must persist for 3 consecutive frames
- * - Lost detection is never punished
- * - Lane violation: torso center outside lane for > 0.4s
- * - 3 strikes = OUT
- * - Finish line: mid-hip height >= finishLineY (default 0.80)
- * - Points: 3, 2, 1, 0 minus 1 per strike (min 0)
+ * Aqaarib Motion Engine - Red Light Game Logic
+ * Evaluates motion thresholds, vertical lanes, grace periods, and finish crossing.
  */
 
 export const LIGHT_STATES = {
@@ -21,11 +9,6 @@ export const LIGHT_STATES = {
   RED: 'RED'
 };
 
-/**
- * Calculates Red and Yellow thresholds from calibration results.
- * @param {Object} calibration - { noiseFloor, walkingSpeed }
- * @returns {Object} - { redLimit, yellowCap }
- */
 export function calculateThresholds(calibration) {
   const noiseFloor = Math.max(0, calibration?.noiseFloor || 0.01);
   const walkingSpeed = Math.max(noiseFloor, calibration?.walkingSpeed || 0.1);
@@ -41,11 +24,6 @@ export function calculateThresholds(calibration) {
   };
 }
 
-/**
- * Returns lane boundaries for 2 to 4 lanes dividing [0, 1].
- * @param {number} numLanes - 2, 3, or 4
- * @returns {Array<{ index: number, minX: number, maxX: number, centerX: number }>}
- */
 export function getLaneBoundaries(numLanes = 3) {
   const count = Math.min(4, Math.max(2, Math.floor(numLanes)));
   const lanes = [];
@@ -55,7 +33,7 @@ export function getLaneBoundaries(numLanes = 3) {
     const minX = i * width;
     const maxX = (i + 1) * width;
     lanes.push({
-      index: i + 1, // 1-based index
+      index: i + 1,
       minX,
       maxX,
       centerX: (minX + maxX) / 2
@@ -64,27 +42,12 @@ export function getLaneBoundaries(numLanes = 3) {
   return lanes;
 }
 
-/**
- * Determines which lane an x coordinate belongs to.
- * @param {number} torsoX - Normalized x [0, 1]
- * @param {number} numLanes - Number of lanes
- * @returns {number} 1-based lane index
- */
 export function getLaneForX(torsoX, numLanes = 3) {
   const count = Math.min(4, Math.max(2, Math.floor(numLanes)));
   const clamped = Math.max(0, Math.min(0.9999, torsoX));
   return Math.floor(clamped * count) + 1;
 }
 
-/**
- * Checks if a player's torso center is within their assigned lane.
- * Includes a small forgiving padding (default 2% of screen width).
- * @param {number} torsoX
- * @param {number} assignedLane - 1-based index
- * @param {number} numLanes
- * @param {number} padding - Normalized margin
- * @returns {boolean}
- */
 export function isInsideLane(torsoX, assignedLane, numLanes = 3, padding = 0.02) {
   const lanes = getLaneBoundaries(numLanes);
   const lane = lanes.find(l => l.index === assignedLane);
@@ -92,15 +55,6 @@ export function isInsideLane(torsoX, assignedLane, numLanes = 3, padding = 0.02)
   return torsoX >= (lane.minX - padding) && torsoX <= (lane.maxX + padding);
 }
 
-/**
- * Checks if a player's mid-hip height has crossed the finish line.
- * MediaPipe landmarks: 23 = left_hip, 24 = right_hip.
- * Normalized y goes 0.0 (top) to 1.0 (bottom).
- * Crossing finish line means hip y >= finishLineY.
- * @param {Array<{ x: number, y: number }>} landmarks
- * @param {number} finishLineY - default 0.80
- * @returns {boolean}
- */
 export function checkMidHipFinish(landmarks, finishLineY = 0.80) {
   if (!landmarks || landmarks.length < 25) return false;
   const leftHip = landmarks[23];
@@ -111,9 +65,6 @@ export function checkMidHipFinish(landmarks, finishLineY = 0.80) {
   return midHipY >= finishLineY;
 }
 
-/**
- * Generates humanized plain reason for events.
- */
 export function generatePlainReason({ playerName, type, light, motion, limit, durationSec }) {
   if (type === 'STRIKE_RED_MOTION') {
     const ratio = limit > 0 ? (motion / limit).toFixed(1) : '3';
@@ -136,20 +87,10 @@ export function generatePlainReason({ playerName, type, light, motion, limit, du
   return `${playerName} triggered an event`;
 }
 
-/**
- * Calculates final scores based on finish order and strikes.
- * Finishing order points: 1st: 3, 2nd: 2, 3rd: 1, 4th: 0.
- * Minus 1 per strike, never below 0.
- * @param {Array<string>} finishOrder - Player IDs in order of finish
- * @param {Object} strikesMap - { [playerId]: strikeCount }
- * @param {Array<string>} allPlayerIds - All registered player IDs
- * @returns {Object} - { [playerId]: score }
- */
 export function calculateScores(finishOrder = [], strikesMap = {}, allPlayerIds = []) {
   const scores = {};
   const rankPoints = [3, 2, 1, 0];
 
-  // Initialize all players with 0
   allPlayerIds.forEach(id => {
     scores[id] = 0;
   });
@@ -163,10 +104,6 @@ export function calculateScores(finishOrder = [], strikesMap = {}, allPlayerIds 
   return scores;
 }
 
-/**
- * Pure Game Judge State Machine for Red Light.
- * Tracks per-player consecutive frames, lane exit duration, strikes, and finish status.
- */
 export class RedLightJudge {
   constructor(config = {}) {
     this.numLanes = config.numLanes || 3;
@@ -184,9 +121,6 @@ export class RedLightJudge {
     this.events = [];
   }
 
-  /**
-   * Initializes or gets state for a player.
-   */
   _getPlayerState(playerId, playerName, assignedLane) {
     if (!this.playerStates[playerId]) {
       this.playerStates[playerId] = {
@@ -206,23 +140,6 @@ export class RedLightJudge {
     return this.playerStates[playerId];
   }
 
-  /**
-   * Evaluates one frame of game state.
-   * @param {Object} frame
-   *   - timestampMs: Current frame timestamp in ms
-   *   - currentLight: 'GREEN' | 'YELLOW' | 'RED'
-   *   - lightChangeTimeMs: Timestamp when current light was turned on
-   *   - players: Array of {
-   *       id: string,
-   *       name: string,
-   *       assignedLane: number,
-   *       isDetected: boolean,
-   *       landmarks: Array<{x, y}>,
-   *       torsoCenter: {x, y},
-   *       motion: number
-   *     }
-   * @returns {Object} { strikes: Array, finishes: Array, events: Array, scores: Object }
-   */
   evaluateFrame(frame) {
     const { timestampMs, currentLight, lightChangeTimeMs, players } = frame;
     const timeSinceLightChange = timestampMs - lightChangeTimeMs;
@@ -239,10 +156,8 @@ export class RedLightJudge {
         playerInput.assignedLane
       );
 
-      // Skip already eliminated or finished players
       if (state.isOut || state.hasFinished) continue;
 
-      // RULE: "a briefly lost detection is never punished"
       if (!playerInput.isDetected) {
         state.consecutiveViolationFrames = 0;
         state.violationType = null;
@@ -289,9 +204,8 @@ export class RedLightJudge {
         } else {
           const outDuration = timestampMs - state.outOfLaneStartTimeMs;
           if (outDuration >= this.laneViolationMsThreshold) {
-            // Lane Strike
             state.strikes += 1;
-            state.outOfLaneStartTimeMs = null; // reset after strike
+            state.outOfLaneStartTimeMs = null;
             const reason = generatePlainReason({
               playerName: state.name,
               type: 'STRIKE_LANE_VIOLATION',
@@ -325,11 +239,10 @@ export class RedLightJudge {
           }
         }
       } else {
-        // Player is back inside their lane, reset lane timer
         state.outOfLaneStartTimeMs = null;
       }
 
-      // 3. Motion Judging during Red / Yellow (Skip during grace period)
+      // 3. Motion Judging during Red / Yellow
       if (inGracePeriod) {
         state.consecutiveViolationFrames = 0;
         state.violationType = null;
@@ -360,10 +273,9 @@ export class RedLightJudge {
           state.consecutiveViolationFrames = 1;
         }
 
-        // RULE: "A violation must last 3 consecutive frames to count"
         if (state.consecutiveViolationFrames >= this.consecutiveFramesRequired) {
           state.strikes += 1;
-          state.consecutiveViolationFrames = 0; // reset counter after strike issued
+          state.consecutiveViolationFrames = 0;
           state.violationType = null;
 
           const limit = currentLight === LIGHT_STATES.RED ? this.redLimit : this.yellowCap;
@@ -404,7 +316,6 @@ export class RedLightJudge {
           }
         }
       } else {
-        // Reset consecutive violation counter when within legal movement bounds
         state.consecutiveViolationFrames = 0;
         state.violationType = null;
       }

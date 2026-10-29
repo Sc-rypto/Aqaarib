@@ -1,9 +1,6 @@
 /**
- * Game 1: Red Light, Green Light
- * /games/red_light.js - Person B Implementation
- *
- * Connects vision layer (poseTracker, motion), pure rule engine (redLight.js),
- * and core stubs (inputSource, evidence, audio, loop, report).
+ * Aqaarib Games - Red Light, Green Light
+ * Manages game pacing, audio speech callouts, lane refereeing, and evidence recording.
  */
 
 import { poseTracker } from '../vision/poseTracker.js';
@@ -12,14 +9,13 @@ import {
   LIGHT_STATES,
   RedLightJudge,
   calculateThresholds,
-  getLaneBoundaries,
-  generatePlainReason
+  getLaneBoundaries
 } from './logic/redLight.js';
 import { inputSource } from '../dev/stubs/inputSource.js';
 import { captureStill, drawEvidenceAnnotations, saveEvidence, getEvidenceList, clearEvidence } from '../dev/stubs/evidence.js';
 import { audio } from '../dev/stubs/audio.js';
 import { createLoop } from '../dev/stubs/loop.js';
-import { createReport, downloadReportJson } from '../dev/stubs/report.js';
+import { createReport } from '../dev/stubs/report.js';
 
 export class RedLightGame {
   constructor(options = {}) {
@@ -44,12 +40,10 @@ export class RedLightGame {
     this.sessionStartTimeMs = 0;
     this.gameActive = false;
 
-    // MediaRecorder for session video recording
     this.mediaRecorder = null;
     this.recordedChunks = [];
     this.recordedVideoBlob = null;
 
-    // Callbacks for UI updates
     this.onStateChange = options.onStateChange || (() => {});
     this.onEvent = options.onEvent || (() => {});
     this.onEvidenceCaptured = options.onEvidenceCaptured || (() => {});
@@ -88,9 +82,22 @@ export class RedLightGame {
     }));
   }
 
-  /**
-   * Runs the interactive calibration step (3s still, 3s walking).
-   */
+  async narrateRules(onStep = () => {}) {
+    const steps = [
+      { step: 1, text: "Welcome to Red Light, Green Light! Stand in your designated lane." },
+      { step: 2, text: "When the light is Green, walk forward towards the finish line." },
+      { step: 3, text: "On Yellow, move only in slow motion." },
+      { step: 4, text: "When the light turns Red, freeze completely! Any movement triggers a strike." },
+      { step: 5, text: "Stay within your lane. Three strikes and you are out. First across the finish line wins!" }
+    ];
+
+    for (const item of steps) {
+      onStep(item);
+      await audio.speak(item.text);
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }
+
   async calibrate(onProgress) {
     const video = this.videoElement || inputSource.getVideoElement();
     if (!video) throw new Error('Camera must be active to calibrate');
@@ -108,9 +115,6 @@ export class RedLightGame {
     return this.thresholds;
   }
 
-  /**
-   * Starts a new Red Light game round.
-   */
   start() {
     this.stop();
     clearEvidence();
@@ -127,17 +131,13 @@ export class RedLightGame {
     this.lightChangeTimeMs = performance.now();
     this.currentLight = LIGHT_STATES.GREEN;
 
-    // Start video recording if canvas is available
     this._startRecording();
 
-    // Announce Green Light
-    audio.speak('Green light! Walk forward!');
+    audio.speak('Green light! Advance forward!');
     audio.beep({ frequency: 523.25, duration: 0.2 });
 
-    // Schedule initial random light change (2 to 5 seconds)
     this._scheduleNextLight();
 
-    // Start 15 FPS vision loop
     this.gameLoop = createLoop({
       fps: 15,
       update: (now) => this._tickVision(now),
@@ -154,8 +154,7 @@ export class RedLightGame {
       clearTimeout(this.nextLightChangeTimer);
     }
 
-    // Random interval between 2.0s and 5.0s
-    const delayMs = Math.round(2000 + Math.random() * 3000);
+    const delayMs = Math.round(2200 + Math.random() * 2800);
 
     this.nextLightChangeTimer = setTimeout(() => {
       if (!this.gameActive) return;
@@ -167,24 +166,21 @@ export class RedLightGame {
   _changeLight() {
     let nextLight = LIGHT_STATES.GREEN;
     if (this.currentLight === LIGHT_STATES.GREEN) {
-      // 50% chance Yellow, 50% chance Red
       nextLight = Math.random() > 0.5 ? LIGHT_STATES.YELLOW : LIGHT_STATES.RED;
     } else if (this.currentLight === LIGHT_STATES.YELLOW) {
       nextLight = LIGHT_STATES.RED;
     } else {
-      // From RED, switch back to GREEN
       nextLight = LIGHT_STATES.GREEN;
     }
 
     this.currentLight = nextLight;
     this.lightChangeTimeMs = performance.now();
 
-    // Voice & Sound alerts
     if (nextLight === LIGHT_STATES.GREEN) {
       audio.speak('Green light!');
       audio.beep({ frequency: 587.33, duration: 0.15, type: 'triangle' });
     } else if (nextLight === LIGHT_STATES.YELLOW) {
-      audio.speak('Yellow light! Slow motion only!');
+      audio.speak('Yellow light! Slow motion!');
       audio.beep({ frequency: 440.0, duration: 0.25, type: 'sine' });
     } else if (nextLight === LIGHT_STATES.RED) {
       audio.speak('Red light! Freeze!');
@@ -197,17 +193,13 @@ export class RedLightGame {
   _tickVision(timestampMs) {
     if (!this.gameActive || !this.videoElement) return;
 
-    // 1. Detect poses for up to 4 people
     const detectedPeople = poseTracker.detect(this.videoElement, timestampMs);
-
-    // 2. Associate detected poses to players by lane horizontal position
     const laneBounds = getLaneBoundaries(this.numLanes);
 
     const playerInputs = this.players.map(player => {
       const assignedLane = player.lane;
       const targetLaneObj = laneBounds.find(l => l.index === assignedLane);
 
-      // Find person whose torso center is closest to this lane center
       let bestPerson = null;
       let minDistance = Infinity;
 
@@ -245,7 +237,6 @@ export class RedLightGame {
       };
     });
 
-    // 3. Evaluate rules using pure RedLightJudge
     const verdict = this.judge.evaluateFrame({
       timestampMs,
       currentLight: this.currentLight,
@@ -253,7 +244,6 @@ export class RedLightGame {
       players: playerInputs
     });
 
-    // 4. Handle new strikes -> capture evidence
     verdict.newStrikes.forEach(strike => {
       this._captureEvidenceForStrike(strike, playerInputs);
       audio.beep({ frequency: 220, duration: 0.3, type: 'sawtooth' });
@@ -261,15 +251,13 @@ export class RedLightGame {
       this.onEvent(strike);
     });
 
-    // 5. Handle new finishes -> capture evidence
     verdict.newFinishes.forEach(fin => {
       this._captureEvidenceForFinish(fin, playerInputs);
       audio.beep({ frequency: 880, duration: 0.3, type: 'sine' });
-      audio.speak(`${fin.playerName} finished in rank ${fin.rank}!`);
+      audio.speak(`${fin.playerName} crossed the finish line! Rank ${fin.rank}!`);
       this.onEvent(fin);
     });
 
-    // 6. Check game over: all players either finished or out (3 strikes)
     const activeRemaining = this.players.filter(p => {
       const state = this.judge.playerStates[p.id];
       return state && !state.isOut && !state.hasFinished;
@@ -298,7 +286,7 @@ export class RedLightGame {
       watermarkText: `STRIKE: ${strike.reason}`
     });
 
-    const dataUri = canvas.toDataURL('image/jpeg', 0.85);
+    const dataUri = canvas.toDataURL('image/jpeg', 0.88);
     const evRecord = saveEvidence({
       title: `Strike on ${strike.playerName}`,
       reason: strike.reason,
@@ -327,7 +315,7 @@ export class RedLightGame {
       watermarkText: `FINISH: ${fin.playerName} #${fin.rank}`
     });
 
-    const dataUri = canvas.toDataURL('image/jpeg', 0.85);
+    const dataUri = canvas.toDataURL('image/jpeg', 0.88);
     const evRecord = saveEvidence({
       title: `Finish: ${fin.playerName} (Rank ${fin.rank})`,
       reason: fin.reason,
@@ -350,7 +338,7 @@ export class RedLightGame {
       this.gameLoop.stop();
     }
 
-    audio.speak('Game over! All lanes resolved.');
+    audio.speak('Game over! All lane positions resolved.');
     audio.beep({ frequency: 659.25, duration: 0.5 });
 
     const finalReport = this.exportResult();
@@ -380,9 +368,7 @@ export class RedLightGame {
         this.recordedVideoBlob = new Blob(this.recordedChunks, { type: 'video/webm' });
       };
       this.mediaRecorder.start(1000);
-    } catch (e) {
-      console.warn('MediaRecorder not available or failed to start:', e);
-    }
+    } catch (e) {}
   }
 
   stopRecording() {
@@ -405,9 +391,7 @@ export class RedLightGame {
     URL.revokeObjectURL(url);
   }
 
-  _renderOverlay(now) {
-    // Optional render hook for canvas HUD
-  }
+  _renderOverlay(now) {}
 
   getState(playerInputs = []) {
     return {

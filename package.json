@@ -1,7 +1,7 @@
 {
-  "name": "vision-family-games",
+  "name": "aqaarib-family-games",
   "version": "1.0.0",
-  "description": "Shared vision layer, Red Light, and Hot Potato family motion games (Person B)",
+  "description": "Aqaarib Family Operating Hub - Interactive Camera Motion Games",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
@@ -10,10 +10,8 @@
   "keywords": [
     "mediapipe",
     "pose-estimation",
-    "kinship",
-    "games",
-    "family-hub"
+    "family-games",
+    "motion-referee"
   ],
-  "author": "Person B",
   "license": "MIT"
 }

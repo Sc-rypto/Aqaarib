@@ -3,19 +3,28 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Kinship • Hot Potato</title>
+  <title>Aqaarib • Hot Potato Runner</title>
+  <link rel="icon" type="image/png" href="../Aqaarib Favicons/heart_lightmode.png" id="site-favicon"/>
   <link rel="stylesheet" href="../css/kinship.css"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"/>
 </head>
 <body>
-  <!-- Header -->
+  <canvas id="bg-canvas" class="bg-canvas"></canvas>
+
   <header class="kinship-header">
-    <a href="../index.html" class="brand-title">
-      <span class="material-symbols-outlined" style="color: var(--primary-accent);">timer</span>
-      Kinship Motion Games
+    <a href="../index.html" class="brand-wrap">
+      <img src="../Aqaarib Favicons/heart_lightmode.png" alt="Aqaarib" style="width: 28px; height: 28px;"/>
+      <span class="brand-title">Aqaarib</span>
     </a>
-    <div style="display: flex; align-items: center; gap: 1rem;">
-      <span class="brand-badge">Person B • Standalone Dev Runner</span>
+
+    <nav class="nav-tabs">
+      <a href="../index.html" class="nav-tab">Home</a>
+      <a href="../red_light.html" class="nav-tab">Red Light</a>
+      <a href="../hot_potato.html" class="nav-tab active">Hot Potato</a>
+    </nav>
+
+    <div style="display: flex; align-items: center; gap: 0.85rem;">
+      <span class="brand-badge">Photo Freeze</span>
       <button id="themeToggle" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
         <span class="material-symbols-outlined" style="font-size: 1.1rem;">dark_mode</span>
       </button>
@@ -23,120 +32,102 @@
   </header>
 
   <main class="page-container">
-    <!-- Game Banner -->
     <div class="kinship-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
       <div>
         <h1 class="card-title">
-          <span class="material-symbols-outlined" style="color: var(--primary-accent);">local_fire_department</span>
+          <span class="material-symbols-outlined" style="color: var(--primary-accent); font-size: 1.8rem;">timer</span>
           Hot Potato (Photo Freeze)
         </h1>
-        <p class="card-subtitle">Accelerating hidden countdown • Random HIDE & ZONE modes • Instant face matching</p>
+        <p class="card-subtitle">Accelerating countdown • Random HIDE & ZONE modes • Instant highlight boxes & snapshot saving</p>
       </div>
 
-      <!-- Mode & Round Badge -->
       <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <span class="pill-badge yellow" id="badgeRound" style="font-size: 0.85rem; padding: 0.4rem 0.9rem;">
+        <span class="pill-badge yellow" id="badgeRound" style="font-size: 0.85rem; padding: 0.4rem 0.95rem;">
           Round: Ready (3 Rounds)
         </span>
-        <span class="pill-badge red" id="badgeMode" style="font-size: 0.85rem; padding: 0.4rem 0.9rem; display: none;">
+        <span class="pill-badge red" id="badgeMode" style="font-size: 0.85rem; padding: 0.4rem 0.95rem; display: none;">
           Mode: HIDE
         </span>
       </div>
     </div>
 
-    <!-- Main Grid: Media Viewport & Controls -->
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;" id="mainGrid">
-      <!-- Media Viewport (Camera or Video Scrubber) -->
-      <div class="kinship-card" style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
-        <!-- Input Switcher: Camera vs Video File -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.75rem;" id="mainGrid">
+      <div class="kinship-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; gap: 0.5rem;">
-            <button id="btnModeCamera" class="btn-secondary active" style="padding: 0.35rem 0.8rem; font-size: 0.8rem; border-color: var(--primary-accent);">
-              <span class="material-symbols-outlined" style="font-size: 1rem;">videocam</span>
+            <button id="btnModeCamera" class="btn-secondary active" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; border-color: var(--primary-accent);">
+              <span class="material-symbols-outlined" style="font-size: 1.05rem;">videocam</span>
               Live Camera
             </button>
-            <button id="btnModeFile" class="btn-secondary" style="padding: 0.35rem 0.8rem; font-size: 0.8rem;">
-              <span class="material-symbols-outlined" style="font-size: 1rem;">movie</span>
+            <button id="btnModeFile" class="btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.82rem;">
+              <span class="material-symbols-outlined" style="font-size: 1.05rem;">movie</span>
               Video File
             </button>
           </div>
           <input type="file" id="videoFileInput" accept="video/*" style="display: none;"/>
-          <button id="btnUploadVideo" class="btn-secondary" style="padding: 0.35rem 0.8rem; font-size: 0.8rem; display: none;">
-            <span class="material-symbols-outlined" style="font-size: 1rem;">upload_file</span>
+          <button id="btnUploadVideo" class="btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; display: none;">
+            <span class="material-symbols-outlined" style="font-size: 1.05rem;">upload_file</span>
             Choose Video...
           </button>
         </div>
 
-        <!-- Viewport -->
-        <div class="camera-viewport-wrap">
+        <div class="camera-viewport-wrap" id="viewportWrap">
           <video id="mediaVideo" playsinline muted autoplay></video>
           <canvas id="overlayCanvas"></canvas>
         </div>
 
-        <!-- Video Scrubber (Visible in Video File Mode) -->
-        <div id="scrubberRow" style="display: none; flex-direction: column; gap: 0.4rem; background: var(--surface-container); padding: 0.75rem; border-radius: 0.5rem;">
-          <div style="display: flex; justify-content: space-between; font-family: var(--font-label); font-size: 0.75rem;">
+        <div id="scrubberRow" style="display: none; flex-direction: column; gap: 0.4rem; background: var(--surface-container); padding: 0.85rem; border-radius: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; font-family: var(--font-label); font-size: 0.78rem;">
             <span>Frame Scrubber</span>
             <span id="scrubberTime">0:00 / 0:00</span>
           </div>
           <input type="range" id="videoScrubber" min="0" max="100" value="0" style="width: 100%; accent-color: var(--primary-accent);"/>
-          <button id="btnJudgeScrubFrame" class="btn-primary" style="align-self: flex-start; padding: 0.45rem 1rem; font-size: 0.82rem; margin-top: 0.25rem;">
+          <button id="btnJudgeScrubFrame" class="btn-primary" style="align-self: flex-start; padding: 0.45rem 1.1rem; font-size: 0.85rem; margin-top: 0.35rem;">
             <span class="material-symbols-outlined" style="font-size: 1rem;">fact_check</span>
             Judge This Frame
           </button>
         </div>
 
-        <!-- Live Status Bar -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-          <div id="standingsStrip" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <!-- Player scores rendered here -->
-          </div>
-          <div style="font-family: var(--font-label); font-size: 0.8rem; color: var(--on-surface-variant);" id="timerCountdown">
-            Timer: Idle
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+          <div id="standingsStrip" style="display: flex; gap: 0.6rem; flex-wrap: wrap;"></div>
+          <div style="font-family: var(--font-label); font-size: 0.85rem; color: var(--on-surface-variant);" id="timerCountdown">
+            Timer: Ready
           </div>
         </div>
       </div>
 
-      <!-- Enrollment & Host Management -->
-      <div class="kinship-card" style="display: flex; flex-direction: column; gap: 1.25rem;">
-        <h2 class="card-title" style="font-size: 1.15rem;">
-          <span class="material-symbols-outlined">face</span>
-          Player Roster & Face Enrollment
+      <div class="kinship-card" style="display: flex; flex-direction: column; gap: 1.35rem;">
+        <h2 class="card-title" style="font-size: 1.2rem;">
+          <span class="material-symbols-outlined">group</span>
+          Player Roster & Faces
         </h2>
 
-        <!-- Enrollment Form -->
-        <div style="background: var(--surface-container); padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.6rem;">
-          <label style="font-family: var(--font-label); font-size: 0.8rem; font-weight: 600;">Add Player Photo</label>
+        <div style="background: var(--surface-container); padding: 1.1rem; border-radius: 0.85rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.65rem;">
+          <label style="font-family: var(--font-label); font-size: 0.82rem; font-weight: 600;">Enroll Player Face</label>
+          <input type="text" id="newPlayerName" placeholder="Enter name (e.g. Omar)" style="padding: 0.55rem 0.85rem; border-radius: 9999px; border: 1px solid var(--border-color); background: var(--surface-lowest); font-family: var(--font-sans); font-size: 0.88rem;"/>
           <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="newPlayerName" placeholder="Player name (e.g. Omar)" style="flex: 1; padding: 0.5rem 0.75rem; border-radius: 9999px; border: 1px solid var(--border-color); background: var(--surface-lowest); font-family: var(--font-sans); font-size: 0.85rem;"/>
-          </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button id="btnSnapEnroll" class="btn-secondary" style="flex: 1; justify-content: center; font-size: 0.78rem;">
-              <span class="material-symbols-outlined" style="font-size: 0.95rem;">photo_camera</span>
-              Snap from Camera
+            <button id="btnSnapEnroll" class="btn-secondary" style="flex: 1; justify-content: center; font-size: 0.8rem;">
+              <span class="material-symbols-outlined" style="font-size: 1rem;">photo_camera</span>
+              Snap Face
             </button>
             <input type="file" id="faceFileInput" accept="image/*" style="display: none;"/>
-            <button id="btnUploadEnroll" class="btn-secondary" style="flex: 1; justify-content: center; font-size: 0.78rem;">
-              <span class="material-symbols-outlined" style="font-size: 0.95rem;">upload</span>
-              Upload Photo
+            <button id="btnUploadEnroll" class="btn-secondary" style="flex: 1; justify-content: center; font-size: 0.8rem;">
+              <span class="material-symbols-outlined" style="font-size: 1rem;">upload</span>
+              Upload
             </button>
           </div>
-          <div id="enrollMessage" style="font-family: var(--font-label); font-size: 0.75rem; color: var(--secondary-accent);"></div>
+          <div id="enrollMessage" style="font-family: var(--font-label); font-size: 0.78rem; color: var(--secondary-accent);"></div>
         </div>
 
-        <!-- Enrolled Players Roster -->
         <div>
-          <div style="font-family: var(--font-label); font-weight: 600; font-size: 0.8rem; margin-bottom: 0.4rem;">Enrolled Players</div>
-          <div id="rosterList" style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 140px; overflow-y: auto;">
-            <!-- Player items -->
-          </div>
+          <div style="font-family: var(--font-label); font-weight: 600; font-size: 0.82rem; margin-bottom: 0.4rem;">Enrolled Family Members</div>
+          <div id="rosterList" style="display: flex; flex-direction: column; gap: 0.45rem; max-height: 150px; overflow-y: auto;"></div>
         </div>
 
-        <!-- Action Buttons -->
-        <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: auto;">
-          <button id="btnStartPotatoRound" class="btn-primary" style="justify-content: center; font-size: 1rem; padding: 0.85rem;">
-            <span class="material-symbols-outlined">alarm</span>
-            Start Next Round
+        <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: auto;">
+          <button id="btnStartPotatoRound" class="btn-primary" style="justify-content: center; font-size: 1.05rem; padding: 0.9rem;">
+            <span class="material-symbols-outlined">play_arrow</span>
+            Start Next Round (Fast Timer)
           </button>
           <button id="btnExportPotatoReport" class="btn-secondary" style="justify-content: center; display: none;">
             <span class="material-symbols-outlined">download</span>
@@ -146,71 +137,119 @@
       </div>
     </div>
 
+    <!-- Latest Photo Snapshot & Analysis Card -->
+    <div class="kinship-card" id="latestSnapshotCard" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 class="card-title" style="color: var(--primary-accent);">
+            <span class="material-symbols-outlined">camera</span>
+            Snap Freeze Analysis Complete
+          </h2>
+          <p class="card-subtitle" id="snapVerdictSummary" style="margin-bottom: 0;">Highlight rectangles mark who was caught in the frame</p>
+        </div>
+        <button id="btnSavePicture" class="btn-primary" style="padding: 0.6rem 1.3rem;">
+          <span class="material-symbols-outlined">download</span>
+          Save Picture
+        </button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; align-items: start;">
+        <img id="latestSnapshotImg" class="snap-result-img" alt="Snap Analysis"/>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; background: var(--surface-container); padding: 1.25rem; border-radius: 1rem;">
+          <h3 style="font-family: var(--font-serif); font-size: 1.2rem;">Round Verdict</h3>
+          <div id="verdictPlayerList" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Evidence Gallery -->
     <div class="kinship-card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
         <div>
           <h2 class="card-title">
             <span class="material-symbols-outlined" style="color: var(--primary-accent);">collections</span>
             Round Snapshots & Evidence
           </h2>
-          <p class="card-subtitle" style="margin-bottom: 0;">Judged photos with player identification boxes and verdicts</p>
+          <p class="card-subtitle" style="margin-bottom: 0;">Tagged photos with highlight boxes and in/out verdicts</p>
         </div>
         <span class="brand-badge" id="potatoEvidenceCountBadge">0 Snapshots</span>
       </div>
 
       <div class="polaroid-grid" id="potatoEvidenceGrid">
         <p style="color: var(--on-surface-variant); font-size: 0.9rem; grid-column: 1 / -1; padding: 1rem 0;">
-          No rounds judged yet. Start round 1 or click "Judge this frame" on a video file.
+          No rounds judged yet. Start round 1 to begin the countdown!
         </p>
       </div>
     </div>
   </main>
 
-  <!-- "Who is this?" Host Picker Modal -->
-  <div id="hostPickerModal" class="modal-backdrop" style="display: none;">
+  <div id="potatoBriefingModal" class="modal-backdrop" style="display: none;">
     <div class="modal-content">
-      <h3 style="font-family: var(--font-serif); font-size: 1.25rem;">
-        <span class="material-symbols-outlined" style="color: var(--primary-accent); vertical-align: middle;">help_outline</span>
-        Who is this person?
-      </h3>
-      <p style="font-size: 0.85rem; color: var(--on-surface-variant);">
-        A person was detected in the photo but their face was not confidently matched to an enrolled player. Please assign them:
-      </p>
-
-      <div id="hostPickerList" style="display: flex; flex-direction: column; gap: 0.6rem;">
-        <!-- Option buttons dynamically populated -->
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-family: var(--font-serif); font-size: 1.45rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span class="material-symbols-outlined" style="color: var(--primary-accent);">record_voice_over</span>
+          Hot Potato Briefing
+        </h3>
+        <span class="pill-badge yellow">Photo Freeze</span>
       </div>
 
-      <button id="btnCancelPicker" class="btn-secondary" style="margin-top: 0.5rem; justify-content: center;">
-        Skip / Unidentified
-      </button>
+      <p style="font-size: 0.9rem; color: var(--on-surface-variant);">
+        Listen to the audio coach as the round rules are announced:
+      </p>
+
+      <div class="briefing-step-list" id="briefingList">
+        <div class="briefing-step-item" id="pStep1">
+          <div class="briefing-step-num">1</div>
+          <div>Each round features a secret, accelerating countdown timer.</div>
+        </div>
+        <div class="briefing-step-item" id="pStep2">
+          <div class="briefing-step-num">2</div>
+          <div>Listen to the beeps as they speed up towards zero!</div>
+        </div>
+        <div class="briefing-step-item" id="pStep3">
+          <div class="briefing-step-num">3</div>
+          <div>When the buzzer sounds, the camera immediately takes a photo.</div>
+        </div>
+        <div class="briefing-step-item" id="pStep4">
+          <div class="briefing-step-num">4</div>
+          <div>In <strong>Hide Mode</strong>, stay out of frame. In <strong>Zone Mode</strong>, avoid the red danger box!</div>
+        </div>
+        <div class="briefing-step-item" id="pStep5">
+          <div class="briefing-step-num">5</div>
+          <div>Anyone caught inside is out. Surviving family members score points!</div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem;">
+        <button id="btnSkipPotatoBriefing" class="btn-primary" style="padding: 0.65rem 1.4rem;">
+          Start Round Now
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Dock -->
   <nav class="floating-dock">
     <a href="../index.html" class="dock-item">
       <span class="material-symbols-outlined">home</span>
-      Hub
+      Home
     </a>
-    <a href="red_light.html" class="dock-item">
+    <a href="../red_light.html" class="dock-item">
       <span class="material-symbols-outlined">traffic</span>
       Red Light
     </a>
-    <a href="hot_potato.html" class="dock-item active">
+    <a href="../hot_potato.html" class="dock-item active">
       <span class="material-symbols-outlined">timer</span>
       Hot Potato
     </a>
   </nav>
 
+  <script src="../js/background.js"></script>
   <script type="module">
-    import { HotPotatoGame, judgeFrame } from '../games/hot_potato.js';
+    import { HotPotatoGame } from '../games/hot_potato.js';
     import { inputSource } from './stubs/inputSource.js';
     import { captureStill } from './stubs/evidence.js';
     import { downloadReportJson, validateReport } from './stubs/report.js';
 
-    // Theme Toggle
     const themeBtn = document.getElementById('themeToggle');
     themeBtn.addEventListener('click', () => {
       const isDark = document.body.dataset.theme === 'dark';
@@ -220,6 +259,7 @@
     const videoEl = document.getElementById('mediaVideo');
     const overlayCanvas = document.getElementById('overlayCanvas');
     const overlayCtx = overlayCanvas.getContext('2d');
+    const viewportWrap = document.getElementById('viewportWrap');
 
     const btnModeCamera = document.getElementById('btnModeCamera');
     const btnModeFile = document.getElementById('btnModeFile');
@@ -247,11 +287,15 @@
     const evidenceGrid = document.getElementById('potatoEvidenceGrid');
     const evidenceCountBadge = document.getElementById('potatoEvidenceCountBadge');
 
-    const hostPickerModal = document.getElementById('hostPickerModal');
-    const hostPickerList = document.getElementById('hostPickerList');
-    const btnCancelPicker = document.getElementById('btnCancelPicker');
+    const latestSnapshotCard = document.getElementById('latestSnapshotCard');
+    const latestSnapshotImg = document.getElementById('latestSnapshotImg');
+    const btnSavePicture = document.getElementById('btnSavePicture');
+    const snapVerdictSummary = document.getElementById('snapVerdictSummary');
+    const verdictPlayerList = document.getElementById('verdictPlayerList');
 
-    // Default Players
+    const potatoBriefingModal = document.getElementById('potatoBriefingModal');
+    const btnSkipPotatoBriefing = document.getElementById('btnSkipPotatoBriefing');
+
     let currentPlayers = [
       { id: 'p1', name: 'Omar' },
       { id: 'p2', name: 'Sara' },
@@ -259,14 +303,14 @@
     ];
 
     let game = null;
+    let isBriefing = false;
+    let currentSnapDataUri = null;
 
     async function initGame() {
       game = new HotPotatoGame({
         players: currentPlayers,
         onStateChange: handleStateChange,
-        onEvent: handleEvent,
-        onEvidenceCaptured: renderEvidenceSnapshot,
-        onHostPickerNeeded: showHostPickerModal
+        onEvidenceCaptured: handleEvidenceCaptured
       });
       await game.init();
       renderRoster();
@@ -290,10 +334,13 @@
         videoEl.srcObject = camVideo.srcObject;
         await videoEl.play();
 
-        overlayCanvas.width = 640;
-        overlayCanvas.height = 480;
+        const vw = videoEl.videoWidth || 640;
+        const vh = videoEl.videoHeight || 480;
+        overlayCanvas.width = vw;
+        overlayCanvas.height = vh;
+        viewportWrap.style.aspectRatio = `${vw} / ${vh}`;
       } catch (e) {
-        console.error('Camera error:', e);
+        console.error('Camera setup:', e);
       }
     }
 
@@ -323,8 +370,11 @@
       videoEl.load();
 
       videoEl.onloadedmetadata = () => {
-        overlayCanvas.width = videoEl.videoWidth || 640;
-        overlayCanvas.height = videoEl.videoHeight || 480;
+        const vw = videoEl.videoWidth || 640;
+        const vh = videoEl.videoHeight || 480;
+        overlayCanvas.width = vw;
+        overlayCanvas.height = vh;
+        viewportWrap.style.aspectRatio = `${vw} / ${vh}`;
         videoScrubber.max = videoEl.duration;
         scrubberTime.innerText = `0:00 / ${Math.floor(videoEl.duration)}s`;
       };
@@ -338,27 +388,24 @@
     btnJudgeScrubFrame.addEventListener('click', async () => {
       if (!game) return;
       btnJudgeScrubFrame.disabled = true;
-      btnJudgeScrubFrame.innerText = 'Judging...';
+      btnJudgeScrubFrame.innerText = 'Analyzing Frame...';
       try {
         await game.judgeSpecificFrame(videoEl);
-      } catch (err) {
-        console.error(err);
       } finally {
         btnJudgeScrubFrame.disabled = false;
         btnJudgeScrubFrame.innerHTML = '<span class="material-symbols-outlined" style="font-size: 1rem;">fact_check</span> Judge This Frame';
       }
     });
 
-    // Enrollment
     btnSnapEnroll.addEventListener('click', async () => {
       const name = newPlayerName.value.trim();
       if (!name) {
-        alert('Please enter player name first');
+        alert('Please enter a player name first');
         return;
       }
       try {
         const still = captureStill(videoEl);
-        const res = await game.enrollPlayer({ name }, still);
+        await game.enrollPlayer({ name }, still);
         if (!currentPlayers.some(p => p.name.toLowerCase() === name.toLowerCase())) {
           currentPlayers.push({ id: `p${currentPlayers.length + 1}`, name });
           game.setPlayers(currentPlayers);
@@ -377,7 +424,7 @@
       if (!file) return;
       const name = newPlayerName.value.trim();
       if (!name) {
-        alert('Please enter player name before uploading photo');
+        alert('Please enter a player name before uploading photo');
         return;
       }
 
@@ -401,49 +448,72 @@
 
     function renderRoster() {
       rosterList.innerHTML = '';
-      currentPlayers.forEach((p, idx) => {
+      currentPlayers.forEach(p => {
         const item = document.createElement('div');
-        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: var(--surface-lowest); padding: 0.35rem 0.75rem; border-radius: 9999px; border: 1px solid var(--border-color); font-size: 0.8rem;';
+        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: var(--surface-lowest); padding: 0.4rem 0.85rem; border-radius: 9999px; border: 1px solid var(--border-color); font-size: 0.82rem;';
         item.innerHTML = `
           <span>👤 <strong>${p.name}</strong></span>
-          <span style="font-size: 0.7rem; color: var(--secondary-accent);">Enrolled</span>
+          <span style="font-size: 0.72rem; color: var(--secondary-accent); font-weight: 600;">Enrolled</span>
         `;
         rosterList.appendChild(item);
       });
     }
 
-    // Game Actions
     btnStartRound.addEventListener('click', () => {
       if (!game) return;
-      game.startRound();
-      btnStartRound.disabled = true;
-      btnExportReport.style.display = 'none';
+      if (game.currentRound === 0) {
+        potatoBriefingModal.style.display = 'flex';
+        isBriefing = true;
+        game.narrateRules((item) => {
+          document.querySelectorAll('.briefing-step-item').forEach(el => el.classList.remove('active'));
+          const stepEl = document.getElementById(`pStep${item.step}`);
+          if (stepEl) stepEl.classList.add('active');
+        }).then(() => {
+          if (isBriefing) {
+            closePotatoBriefingAndStart();
+          }
+        });
+      } else {
+        game.startRound();
+      }
     });
+
+    btnSkipPotatoBriefing.addEventListener('click', () => {
+      closePotatoBriefingAndStart();
+    });
+
+    function closePotatoBriefingAndStart() {
+      isBriefing = false;
+      potatoBriefingModal.style.display = 'none';
+      game.startRound();
+    }
 
     btnExportReport.addEventListener('click', () => {
       if (!game) return;
       const rep = game.exportResult();
-      const val = validateReport(rep);
-      if (!val.valid) {
-        alert('Validation errors: ' + val.errors.join(', '));
-      }
       downloadReportJson(rep, 'hot-potato-result.json');
     });
 
-    function handleStateChange(state) {
-      // 1. Round Badge
-      badgeRound.innerText = `Round ${state.currentRound} / ${state.totalRounds}`;
+    btnSavePicture.addEventListener('click', () => {
+      if (!currentSnapDataUri) return;
+      const a = document.createElement('a');
+      a.href = currentSnapDataUri;
+      a.download = `hot-potato-round-${game.currentRound}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
 
-      // 2. Mode Badge
+    function handleStateChange(state) {
+      badgeRound.innerText = `Round ${state.currentRound} / ${state.totalRounds}`;
       badgeMode.style.display = 'inline-flex';
       badgeMode.innerText = `Mode: ${state.currentMode}`;
       badgeMode.className = state.currentMode === 'ZONE' ? 'pill-badge red' : 'pill-badge green';
 
-      // 3. Timer Countdown
       if (state.isCountingDown) {
-        timerCountdown.innerHTML = `⏳ <strong>Ticking...</strong>`;
+        timerCountdown.innerHTML = `⏳ <strong>Ticking fast!</strong> (${(state.msRemaining / 1000).toFixed(1)}s)`;
       } else {
-        timerCountdown.innerText = 'Timer: Idle';
+        timerCountdown.innerText = 'Timer: Ready';
         btnStartRound.disabled = false;
         if (state.currentRound >= state.totalRounds) {
           btnStartRound.innerText = 'Restart Tournament';
@@ -453,7 +523,6 @@
         }
       }
 
-      // 4. Standings
       standingsStrip.innerHTML = '';
       state.standings.forEach(s => {
         const pill = document.createElement('span');
@@ -462,7 +531,6 @@
         standingsStrip.appendChild(pill);
       });
 
-      // 5. Draw Danger Zone on overlay if ZONE mode
       drawOverlay(state);
     }
 
@@ -478,11 +546,11 @@
         const zh = state.currentZone.height * h;
 
         overlayCtx.save();
-        overlayCtx.fillStyle = 'rgba(186, 26, 26, 0.25)';
+        overlayCtx.fillStyle = 'rgba(186, 26, 26, 0.28)';
         overlayCtx.fillRect(zx, zy, zw, zh);
 
         overlayCtx.strokeStyle = '#ba1a1a';
-        overlayCtx.lineWidth = 3;
+        overlayCtx.lineWidth = 3.5;
         overlayCtx.setLineDash([8, 6]);
         overlayCtx.strokeRect(zx, zy, zw, zh);
 
@@ -493,51 +561,45 @@
       }
     }
 
-    function renderEvidenceSnapshot(verdict) {
-      if (!verdict || !verdict.results) return;
+    function handleEvidenceCaptured(verdict) {
+      if (!verdict || !verdict.imageUri) return;
 
+      currentSnapDataUri = verdict.imageUri;
+      latestSnapshotImg.src = verdict.imageUri;
+      latestSnapshotCard.style.display = 'block';
+
+      const caught = verdict.caughtPlayers || [];
+      if (caught.length > 0) {
+        snapVerdictSummary.innerHTML = `Caught: <strong>${caught.map(p => p.playerName).join(', ')}</strong>`;
+      } else {
+        snapVerdictSummary.innerHTML = `<strong>All players survived safely!</strong>`;
+      }
+
+      verdictPlayerList.innerHTML = '';
       verdict.results.forEach(res => {
-        // Find latest evidence item for this player
-        const card = document.createElement('div');
-        card.className = 'polaroid-card';
-        card.innerHTML = `
-          <div style="font-family: var(--font-label); font-weight: 700; color: ${res.isOut ? '#ba1a1a' : '#2e7d32'}; font-size: 0.85rem;">
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; border-radius: 0.5rem; background: var(--surface-lowest); border: 1px solid var(--border-color);';
+        row.innerHTML = `
+          <span>👤 <strong>${res.playerName}</strong></span>
+          <span class="pill-badge ${res.isOut ? 'red' : 'green'}">${res.isOut ? '❌ CAUGHT' : '✅ SAFE'}</span>
+        `;
+        verdictPlayerList.appendChild(row);
+
+        const polaroid = document.createElement('div');
+        polaroid.className = 'polaroid-card';
+        polaroid.innerHTML = `
+          <img src="${verdict.imageUri}" class="polaroid-img" alt="${res.playerName}"/>
+          <div style="font-family: var(--font-label); font-weight: 700; color: ${res.isOut ? '#d32f2f' : '#2e7d32'}; font-size: 0.88rem;">
             ${res.isOut ? '❌ CAUGHT OUT' : '✅ SAFE'}
           </div>
           <div class="polaroid-caption">${res.reason}</div>
           <div class="polaroid-meta">${res.playerName} • Round ${game.currentRound} (${game.currentMode})</div>
         `;
-        evidenceGrid.prepend(card);
+        evidenceGrid.prepend(polaroid);
       });
 
       evidenceCountBadge.innerText = `${document.querySelectorAll('#potatoEvidenceGrid .polaroid-card').length} Snapshots`;
-    }
-
-    function handleEvent(ev) {
-      // Optional sound chime or notification
-    }
-
-    function showHostPickerModal({ unmatchedPeople, enrolledPlayers }) {
-      hostPickerList.innerHTML = '';
-      hostPickerModal.style.display = 'flex';
-
-      const un = unmatchedPeople[0];
-      enrolledPlayers.forEach(p => {
-        const btn = document.createElement('button');
-        btn.className = 'btn-secondary';
-        btn.style.justifyContent = 'space-between';
-        btn.innerHTML = `<span>👤 <strong>${p.name}</strong></span> <span class="material-symbols-outlined">arrow_forward</span>`;
-        btn.onclick = async () => {
-          hostPickerModal.style.display = 'none';
-          await game.resolveHostPicker({ [un.personIndex]: p.id });
-        };
-        hostPickerList.appendChild(btn);
-      });
-
-      btnCancelPicker.onclick = async () => {
-        hostPickerModal.style.display = 'none';
-        await game.resolveHostPicker({});
-      };
+      latestSnapshotCard.scrollIntoView({ behavior: 'smooth' });
     }
 
     initGame();

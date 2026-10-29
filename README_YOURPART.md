@@ -1,178 +1,179 @@
-# Person B: Shared Vision Layer & Family Motion Games
+# Aqaarib Motion Engine - Technical Specifications & Assumptions
 
-This repository contains **Person B's** complete deliverable for the hackathon: a shared vision layer, two motion-based family games (**Red Light** and **Hot Potato**), frozen API stubs in `/dev/stubs`, unit tests, standalone dev test runners, and an editorial **Kinship Family Operating Hub** design system.
+Technical design, mathematical formulas, data schemas, and engineering assumptions for the Aqaarib Family Motion Gaming platform.
 
 ---
 
-## 1. Directory Structure & Ownership
+## 1. Directory Structure
 
 ```
-├── dev/
-│   ├── hot_potato.html          # Standalone dev runner for Hot Potato
-│   ├── red_light.html           # Standalone dev runner for Red Light
-│   ├── validateReport.js        # Node CLI validator for game result objects
-│   └── stubs/                   # FROZEN API STAND-INS (Person A ownership)
-│       ├── audio.js             # Web Audio API synthesizers, ticking, and TTS
-│       ├── evidence.js          # Still frame capture, box annotations & gallery
-│       ├── inputSource.js       # Live webcam & recorded video file management
-│       ├── loop.js              # 15 FPS throttled game loop runner
-│       └── report.js            # Standardized session result builder & validator
-├── games/
-│   ├── hot_potato.js            # Game 2 coordinator & judgeFrame implementation
-│   ├── red_light.js             # Game 1 coordinator, lane tracking & MediaRecorder
-│   └── logic/                   # Pure functions (Node testable, zero DOM dependencies)
-│       ├── hotPotato.js         # Visibility, danger zone, scoring & tie-breaking
-│       └── redLight.js          # Thresholds, lanes, 3-frame persistence, grace logic
-├── vision/
-│   ├── faceMatch.js             # Vladimir Mandic Human face enrollment & cosine matching
-│   ├── motion.js                # Scale-invariant 8-joint motion & 6s calibration
-│   └── poseTracker.js           # MediaPipe Pose Landmarker (Video & Image modes)
-├── tests/
-│   ├── hotPotato.test.js        # Unit tests for Hot Potato rules & scoring
-│   ├── redLight.test.js         # Unit tests for Red Light thresholds, strikes & grace
-│   ├── reportValidation.test.js # Unit tests for result schema validation
-│   └── visionLayer.test.js      # Unit tests for scale invariance & vector similarity
+├── index.html                   # Main living room hub portal
+├── red_light.html               # Red Light Green Light arena
+├── hot_potato.html              # Hot Potato Photo Freeze arena
+├── app/                         # Application controller and game loader
+│   ├── main.js                  # Lobby, live arena, results, and host reversals
+│   ├── gameLoader.js            # Unified game registry for all games
+│   └── adapters/
+│       └── personBAdapter.js    # Motion game module adapter
+├── core/                        # Core system services
+│   ├── config.js                # Verified pinned CDN URLs for dependencies
+│   ├── inputSource.js           # Live camera and scrubbed video file manager
+│   ├── evidence.js              # 640px JPEG base64 evidence store
+│   ├── audio.js                 # Web Audio synthesis and referee speech voice
+│   ├── loop.js                  # Throttled 15 FPS requestAnimationFrame runner
+│   └── report.js                # Schema majlis-result/1 builder & HMAC verifier
+├── styles/                      # Kinship editorial papercraft styling
+│   └── app.css                  # Alabaster Oat, Terracotta, Muted Sage, Soft Ochre
 ├── css/
-│   └── kinship.css              # Warm editorial tactile papercraft styling tokens
-├── index.html                   # Kinship Family Hub launcher
-├── package.json                 # Node test & validation scripts
-└── README_YOURPART.md           # Specification, assumptions & thresholds
+│   └── kinship.css              # Typography, layout tokens, and component classes
+├── data/                        # Family presets and game catalog
+│   ├── defaultPlayers.json      # Sample family rosters
+│   └── gameCatalog.js           # Official referee rules and default configurations
+├── fixtures/                    # Test fixtures for match verification
+│   ├── balloon_signed_report.json
+│   ├── football_signed_report.json
+│   ├── tampered_signed_report.json
+│   └── README.md
+├── games/                       # Game modules implementing Browser Game Module Interface
+│   ├── bus_count.js             # Bus Count game coordinator
+│   ├── report_games.js          # Signed report match judge
+│   ├── red_light.js             # Red Light coordinator
+│   ├── hot_potato.js            # Hot Potato coordinator
+│   └── logic/
+│       ├── busCount.js          # Pure Bus Count functions
+│       ├── redLight.js          # Pure Red Light functions
+│       └── hotPotato.js         # Pure Hot Potato functions
+├── python/                      # Offline Match Referee CLI
+│   └── judge.py                 # Signs majlis-result/1 reports with HMAC SHA256
+├── vision/                      # Edge vision pipeline
+│   ├── poseTracker.js           # MediaPipe Pose Landmarker (0.10.14)
+│   ├── motion.js                # Scale-invariant 8-joint displacement
+│   └── faceMatch.js             # Human face identification (3.2.2)
+├── js/
+│   └── background.js            # Ambient dot-matrix canvas with cursor proximity illumination
+├── dev/                         # Standalone dev runners and stubs
+└── tests/                       # Complete Node unit test suite
 ```
 
 ---
 
-## 2. Shared Vision Layer (`/vision`)
+## 2. Engineering Principles
 
-Both games reuse the same underlying vision components:
+1. **Client-Side Privacy**
+   - Vision models and inference run locally on the user's device.
+   - Offline referee uses Python standard library (`hmac`, `hashlib`, `json`).
 
-### `poseTracker.js`
-- Wraps MediaPipe Pose Landmarker (`@mediapipe/tasks-vision`, pinned version `0.10.14`).
-- Supports both continuous stream mode (`runningMode: 'VIDEO'`) and single-snapshot mode (`runningMode: 'IMAGE'`).
-- Tracks up to **4 people** simultaneously.
-- Downscales camera frames to $360 \times 270$ on an offscreen canvas to guarantee stable $\sim 15$ FPS inference while keeping 60 FPS UI responsiveness.
-- Switchable base URL (`MEDIAPIPE_CONFIG.wasmBaseUrl` and `modelAssetUrl`) allowing seamless redirection to local `/vendor` assets if CDN access is blocked.
-- Standard output format:
-  ```ts
-  Array<{
-    id: number,
-    landmarks: Array<{ x: number, y: number, z: number, visibility?: number }>,
-    torsoCenter: { x: number, y: number },
-    boundingBox: { x: number, y: number, width: number, height: number },
-    visibilityCount: number
-  }>
-  ```
+2. **Standard Web Standards**
+   - Plain HTML, CSS, and native ES modules.
+   - Zero build step or bundler dependencies.
 
-### `motion.js`
-- Scale-invariant motion scoring evaluated across 8 key joints:
-  - Shoulders: 11, 12
-  - Hips: 23, 24
-  - Wrists: 15, 16
-  - Ankles: 27, 28
-- Normalized by **shoulder width** ($\|L_{11} - L_{12}\|$), ensuring movement scores remain consistent whether a player is 2 meters or 5 meters from the lens.
-- Smoothed via a 4-frame rolling moving average to suppress tracking jitter.
-- Interactive `calibrate()` routine:
-  - 3 seconds standing still $\rightarrow$ Noise Floor ($N_f$)
-  - 3 seconds walking normally $\rightarrow$ Walking Speed ($W_s$)
+3. **Pinned Third-Party Dependencies (`core/config.js`)**
+   - Verified dependency URLs:
+     - MediaPipe Tasks Vision Bundle: `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs`
+     - MediaPipe Wasm Base: `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm`
+     - MediaPipe Pose Model: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`
+     - Vladimir Mandic Human ESM: `https://cdn.jsdelivr.net/npm/@vladmandic/human@3.2.2/dist/human.esm.js`
+     - Vladimir Mandic Human Models: `https://cdn.jsdelivr.net/npm/@vladmandic/human@3.2.2/models`
 
-### `faceMatch.js`
-- Wraps Vladimir Mandic's Human library (`@vladmandic/human@3.2.3`).
-- `enroll(name, imageSource)`: extracts feature embedding vector into memory.
-- `identify(imageSource)`: detects faces, calculates cosine similarity against enrolled roster, and returns `{ name, similarity, box }` or `{ name: null, ... }` if below threshold.
+4. **Friendly Human Referee Voice**
+   - Rules, rulings, reasons, and error notifications sound like a warm, supportive referee.
+   - Short and plain language with zero technical jargon.
+   - Zero emojis anywhere in referee dialogue.
+   - Zero dash characters (`-`, `–`, `—`) used as punctuation in referee text.
+
+5. **Host Absolute Reversal**
+   - Every AI ruling includes an option for host review in the live feed and results screen.
+   - Host reversals adjust points, update scores in real time, and re-evaluate winner standings.
 
 ---
 
-## 3. Game 1: Red Light
+## 3. Data Contracts
 
-### Family Rules & Mechanics
-- **Lanes**: 2 to 4 vertical bands dividing normalized width $[0, 1]$. Host lines players up with tape on the floor.
-- **Traffic Light States**: Random light switching between Green, Yellow, and Red every 2 to 5 seconds with voice callouts.
-- **Finish Line**: Evaluates mid-hip height ($(y_{23} + y_{24}) / 2 \ge \text{finishLineY}$). Default is 80% ($0.80$), adjustable by the host via slider.
-- **Video Recording**: Built-in `MediaRecorder` captures canvas stream and offers instant download of the game session video at game over.
+### Result Contract (Version 1: `majlis-result/1`)
+```json
+{
+  "schema": "majlis-result/1",
+  "game": "red_light" | "hot_potato" | "bus_count" | "balloon" | "football",
+  "sessionId": "string",
+  "createdAt": "ISO string",
+  "players": [{ "id": "p1", "name": "string", "team": "A" | "B" | null }],
+  "rules": {},
+  "events": [
+    {
+      "t": 3.4,
+      "type": "string",
+      "player": "id or null",
+      "team": "A" | "B" | null,
+      "points": 1,
+      "reason": "string (friendly referee voice, no emojis, no dash punctuation)",
+      "evidence": "ev1 or null"
+    }
+  ],
+  "scores": {
+    "players": { "p1": 2 },
+    "teams": { "A": 2, "B": 1 }
+  },
+  "winner": {
+    "kind": "player" | "team" | "tie",
+    "id": "p1 or A or null",
+    "reason": "string"
+  },
+  "evidence": [
+    {
+      "id": "ev1",
+      "t": 3.4,
+      "type": "image" | "text",
+      "data": "base64 JPEG without data URL prefix (max width 640px, quality ~0.7)",
+      "caption": "string"
+    }
+  ],
+  "stats": {}
+}
+```
 
-### Judging Rules & Mathematical Thresholds
+### Cryptographic Signed Match Report
+- Envelope format with exactly two keys: `{ "payload": string, "hmac": string }`.
+- `payload` is the verbatim JSON string of one result object.
+- `hmac` is lowercase hex HMAC SHA256 of the UTF-8 bytes of `payload` with the secret key typed by the host.
+- Verified in `core/report.js` via Web Crypto API (`crypto.subtle`) without canonicalization.
+
+---
+
+## 4. Pure Game Logic & Rules
+
+### Game 1: Red Light Green Light (`games/logic/redLight.js`)
+- **Lanes**: 2 to 4 vertical bands dividing normalized width $[0, 1]$.
 - **Red Limit**: $\max(3 \times N_f, 0.08 \times W_s)$
-- **Yellow Cap**: $0.40 \times W_s$
-- **Grace Period**: 500 ms ($0.5$s) immediately following every light switch. Motion during grace is strictly forgiven.
-- **3-Frame Persistence**: Motion violations must persist for 3 consecutive frames to issue a strike.
-- **Lost Detection Immunity**: If MediaPipe briefly loses landmark tracking for a frame, the consecutive strike counter resets. Players are never penalized for camera occlusion.
-- **Lane Violation**: Torso center outside assigned lane for $> 0.4$s ($400$ms) triggers a strike. A 2% normalized safety buffer (`padding = 0.02`) prevents jitter at the boundary.
-- **Strikes & Elimination**: 3 strikes $\rightarrow$ OUT for the round.
-- **Scoring**:
-  - Finishing order: 1st $\rightarrow 3$ pts, 2nd $\rightarrow 2$ pts, 3rd $\rightarrow 1$ pt, 4th $\rightarrow 0$ pts.
-  - Strike penalty: $-1$ pt per strike: $\text{score} = \max(0, \text{finishPts} - \text{strikes})$.
-- **Evidence**: Every strike and finish generates an annotated snapshot with bounding box, caption, and plain reason (e.g., *"Sara kept moving during Red, about 2.8 times over the limit"*).
+- **Grace Period**: 500 ms ($0.5$s) immediately following every light switch.
+- **3-Frame Persistence**: Motion violations must persist for 3 consecutive frames to count.
+- **Finish Line**: Hip height $(y_{23} + y_{24}) / 2 \ge \text{finishLineY}$ (default $0.80$).
+
+### Game 2: Hot Potato Photo Freeze (`games/logic/hotPotato.js`)
+- **Timer**: 5 to 9 second rapid accelerating countdown with sound cues.
+- **Modes**: Random selection between HIDE mode (all visible are out) and ZONE mode (danger rectangle).
+- **Visibility Criterion**: $\ge 4$ of shoulders and hips have landmark visibility $\ge 0.45$.
+
+### Game 3: Bus Count (`games/logic/busCount.js`)
+- **Boarding Threshold**: Door threshold line at normalized $X = 0.35$.
+- **Green Signal (Doors Open)**: Players crossing door line into passenger cabin receive $+1$ boarding point.
+- **Red Signal (Doors Closed)**: Players crossing after the horn receive $-1$ boarding foul.
+- **Headcount**: Counts seated/standing passengers in passenger zone at the terminal station.
+
+### Games 4 & 5: Balloon Keep Up & Football Penalty Shootout (`games/report_games.js`)
+- Offline match judging conducted via Python referee (`python/judge.py`).
+- Cryptographic verification in browser before results and evidence snapshots are displayed.
 
 ---
 
-## 4. Game 2: Hot Potato
-
-### Family Rules & Mechanics
-- **3 Rounds Total**: Each round features a hidden timer (10 to 30 seconds) that emits accelerating audio beeps.
-- **Snap Evaluation**: At $t = 0$, the camera captures a still frame and executes `judgeFrame(image, mode, zone, players)`.
-- **Modes**:
-  - `HIDE`: Anyone visible in the frame is OUT.
-  - `ZONE`: A random danger rectangle is displayed before the countdown begins. Anyone whose torso center is inside the rectangle at photo time is OUT. Remaining visible in the frame outside the zone is SAFE.
-- **Inputs**:
-  - Live webcam with accelerating beeps.
-  - Recorded video file mode (`video_file`) with scrubber slider and `"Judge this frame"` button.
-- **Scoring**:
-  - Everyone not caught in a round receives 1 point.
-  - Most points wins; fewest total catches breaks ties.
-
-### Judging Rules & Mathematical Thresholds
-- **Visibility Criterion**: $\ge 4$ of shoulders (11, 12) and hips (23, 24) have landmark visibility $\ge 0.5$, OR a face was detected by Human.js.
-- **Zone Check**: 2D point-in-rectangle test on player torso center:
-  $$x \in [Z_x, Z_x + Z_w] \quad \text{and} \quad y \in [Z_y, Z_y + Z_h]$$
-- **Face Matching**: Matches recognized face to nearest person pose (distance $< 0.35$).
-- **Host Override**: Any detected person lacking confident face recognition ($\text{sim} < 0.55$) routes to the `"Who is this?"` host modal rather than guessing.
-- **Evidence**: Saves judged frame as evidence with color-coded boxes (Green = SAFE, Red = OUT) and plain text reasons.
-
----
-
-## 5. Frozen Core API Stubs (`/dev/stubs`)
-
-All Person A dependencies are cleanly isolated in `/dev/stubs`:
-1. `inputSource.js`: `startCamera(constraints)`, `loadVideoFile(source)`, `getVideoElement()`, `stop()`.
-2. `evidence.js`: `captureStill(source)`, `drawEvidenceAnnotations(canvas, options)`, `saveEvidence(record)`, `getEvidenceList()`.
-3. `audio.js`: `beep(options)`, `speak(text)`, `startAcceleratingBeeps(options)`, `stopAll()`.
-4. `loop.js`: `createLoop({ update, render, fps })`.
-5. `report.js`: `createReport(data)`, `validateReport(report)`, `downloadReportJson(report)`.
-
----
-
-## 6. Kinship Design System Integration
-
-Following `/Users/bhavya/Downloads/stitch_kinship_family_operating_hub`:
-- **Palette**: Alabaster Oat (`#fff8f4`), Espresso Ink (`#1e1b18`), Terracotta Accent (`#e06d53`), Muted Sage (`#536251`), Soft Ochre (`#dda74f`).
-- **Typography**: Newsreader (editorial headlines), Hanken Grotesk (body ergonomics), Plus Jakarta Sans (status pills).
-- **Papercraft & Tactility**: Dual hairline perimeters, pillowed ambient shadows, polaroid photo evidence framing with wide bottom margins, and floating capsule navigation dock.
-- **Zero Cost / Zero Money**: 100% open-source client-side code, zero cloud billing.
-
----
-
-## 7. Verification & Test Commands
-
-All 22 unit tests run with Node's native test runner (zero external dependencies):
+## 5. Test Suite Verification
 
 ```bash
-# Run full unit test suite
+# Run all unit tests
 npm test
 
 # Run result object schema validator
 npm run validate
+
+# Test Python judge signing and verification
+python3 python/judge.py verify fixtures/balloon_signed_report.json --key referee-secret-2026
 ```
-
-All 22 tests pass:
-- `tests/redLight.test.js`: 9 tests (thresholds, lanes, finish line, scoring, grace period, 3-frame persistence, lost detection immunity, lane boundaries, 3 strikes).
-- `tests/hotPotato.test.js`: 7 tests (4-joint visibility, 2D zone check, nearest face matching, HIDE mode, ZONE mode, host picker, tournament tie-breaking).
-- `tests/reportValidation.test.js`: 3 tests (valid report creation, score checking, plain reason requirement).
-- `tests/visionLayer.test.js`: 3 tests (scale-invariant shoulder normalization, moving average smoothing, cosine similarity).
-
----
-
-## 8. Assumptions & Limitations
-
-1. **Camera Alignment**: Assumes host aligns webcam horizontally with floor tape markings.
-2. **Lighting**: MediaPipe and Human.js rely on standard indoor domestic lighting.
-3. **Headless Environment**: WebGL/WebGPU acceleration and browser media devices are mocked in Node test environments and fully active in browser dev runners (`/dev/red_light.html`, `/dev/hot_potato.html`).
-4. **CDN Fallback**: If internet connectivity is interrupted, `poseTracker.js` supports pointing `wasmBaseUrl` to local `/vendor/tasks-vision/wasm`.

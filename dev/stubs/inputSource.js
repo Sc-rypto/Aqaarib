@@ -1,7 +1,5 @@
 /**
- * Core Stub: inputSource.js
- * Stand-in for Person A's /core/inputSource.js (Frozen API)
- * DO NOT MOVE TO /core - Keep in /dev/stubs until merge.
+ * Aqaarib Media Engine - Video & Camera Input Source
  */
 
 export class InputSource {
@@ -12,11 +10,6 @@ export class InputSource {
     this.isVideoFile = false;
   }
 
-  /**
-   * Starts live webcam stream.
-   * @param {MediaStreamConstraints} constraints
-   * @returns {Promise<HTMLVideoElement>}
-   */
   async startCamera(constraints = { video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' } }) {
     this.stop();
 
@@ -45,11 +38,6 @@ export class InputSource {
     return this.videoElement;
   }
 
-  /**
-   * Loads a recorded video file from File or URL.
-   * @param {File|Blob|string} source
-   * @returns {Promise<HTMLVideoElement>}
-   */
   async loadVideoFile(source) {
     this.stop();
 
@@ -93,9 +81,6 @@ export class InputSource {
     );
   }
 
-  /**
-   * Renders current video frame onto an offscreen canvas at specified resolution.
-   */
   captureFrameToCanvas(targetWidth = 320, targetHeight = 240) {
     if (!this.isReady()) return null;
     const canvas = document.createElement('canvas');

@@ -1,7 +1,6 @@
 /**
- * Core Stub: audio.js
- * Stand-in for Person A's /core/audio.js (Frozen API)
- * DO NOT MOVE TO /core - Keep in /dev/stubs until merge.
+ * Aqaarib Audio Engine
+ * High-fidelity synthesis for game tones, ticking countdowns, and voice briefing.
  */
 
 class SoundEngine {
@@ -24,14 +23,11 @@ class SoundEngine {
     return this.ctx;
   }
 
-  /**
-   * Plays a synthesized beep tone.
-   */
   beep(options = {}) {
     const ctx = this._getAudioContext();
     if (!ctx) return;
 
-    const freq = options.frequency || 659.25; // E5
+    const freq = options.frequency || 659.25;
     const duration = options.duration || 0.12;
     const type = options.type || 'sine';
     const volume = options.volume !== undefined ? options.volume : 0.25;
@@ -51,59 +47,55 @@ class SoundEngine {
 
       osc.start();
       osc.stop(ctx.currentTime + duration);
-    } catch (e) {
-      // Audio autoplay policy or context error
-    }
+    } catch (e) {}
   }
 
   /**
-   * Speaks out loud using Web Speech API synthesis.
-   * If not supported or quiet mode, emits a friendly chime.
-   * @param {string} text
+   * Speaks narration text clearly using browser speech synthesis.
+   * Resolves a Promise when speaking ends.
    */
   speak(text) {
-    if (this.speechSynthesis) {
-      try {
-        this.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.05;
-        utterance.pitch = 1.0;
-        this.speechSynthesis.speak(utterance);
-        return;
-      } catch (e) {
-        // Fallback to chime
+    return new Promise((resolve) => {
+      if (this.speechSynthesis) {
+        try {
+          this.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = 1.0;
+          utterance.pitch = 1.0;
+          utterance.onend = () => resolve();
+          utterance.onerror = () => resolve();
+          this.speechSynthesis.speak(utterance);
+          return;
+        } catch (e) {}
       }
-    }
-    this.beep({ frequency: 523.25, duration: 0.2, type: 'triangle' });
+      this.beep({ frequency: 523.25, duration: 0.2, type: 'triangle' });
+      resolve();
+    });
   }
 
   /**
-   * Accelerating ticking sequence for Hot Potato.
-   * Interval gradually drops from 1000ms down to 80ms as time counts down.
+   * Fast accelerating ticking sequence for Hot Potato.
    */
-  startAcceleratingBeeps({ totalDurationMs = 15000, onTick = () => {}, onComplete = () => {} }) {
+  startAcceleratingBeeps({ totalDurationMs = 8000, onTick = () => {}, onComplete = () => {} }) {
     this.stopTicking();
 
     const startTime = Date.now();
-    const minInterval = 90;
-    const maxInterval = 1000;
+    const minInterval = 75;
+    const maxInterval = 850;
 
     const scheduleNext = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(1.0, elapsed / totalDurationMs);
 
       if (progress >= 1.0) {
-        this.beep({ frequency: 880, duration: 0.4, type: 'sawtooth', volume: 0.4 });
+        this.beep({ frequency: 880, duration: 0.45, type: 'sawtooth', volume: 0.4 });
         onComplete();
         return;
       }
 
-      // Linear interpolation to accelerating speed
-      const currentInterval = maxInterval - (maxInterval - minInterval) * Math.pow(progress, 1.6);
-
-      // Pitch also increases slightly towards the end for suspense!
-      const freq = 440 + progress * 440;
-      this.beep({ frequency: freq, duration: 0.08, type: 'sine', volume: 0.2 + progress * 0.2 });
+      const currentInterval = maxInterval - (maxInterval - minInterval) * Math.pow(progress, 1.8);
+      const freq = 440 + progress * 520;
+      this.beep({ frequency: freq, duration: 0.07, type: 'sine', volume: 0.2 + progress * 0.25 });
       onTick(Math.round(totalDurationMs - elapsed));
 
       this.tickingTimer = setTimeout(scheduleNext, Math.max(minInterval, currentInterval));

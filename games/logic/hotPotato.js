@@ -1,20 +1,6 @@
 /**
- * Hot Potato - Pure Game Logic
- * Person B Implementation
- *
- * Rules:
- * - Hidden timer of 10 to 30 seconds ticks with beeps speeding up.
- * - Photo taken when timer ends.
- * - Two modes at random:
- *   - HIDE: anyone visible in photo is OUT for round.
- *   - ZONE: random danger rectangle shown before timer; anyone whose body center is inside it is OUT. Staying in frame outside zone is safe.
- * - 3 rounds.
- * - Everyone not caught in a round scores 1 point.
- * - Most points wins, fewest catches breaks ties.
- * - Visibility: at least 4 of shoulders & hips (11, 12, 23, 24) have visibility >= 0.5, OR face detected.
- * - Match each person to player through nearest face.
- * - Anyone seen but not matched goes to "who is this?" picker for host instead of guess.
- * - Plain reasons for events.
+ * Aqaarib Motion Engine - Hot Potato Game Logic
+ * Evaluates visibility and danger zone containment for snap-photo judgments.
  */
 
 export const POTATO_MODES = {
@@ -22,25 +8,19 @@ export const POTATO_MODES = {
   ZONE: 'ZONE'
 };
 
-/**
- * Generates a random normalized danger zone for ZONE mode.
- * Kept well within frame bounds [0.1, 0.9] so players have room to avoid it.
- * @param {Object} options
- * @returns {{ x: number, y: number, width: number, height: number }}
- */
 export function generateRandomZone(options = {}) {
-  const minW = options.minWidth || 0.25;
-  const maxW = options.maxWidth || 0.45;
-  const minH = options.minHeight || 0.35;
-  const maxH = options.maxHeight || 0.60;
+  const minW = options.minWidth || 0.28;
+  const maxW = options.maxWidth || 0.44;
+  const minH = options.minHeight || 0.38;
+  const maxH = options.maxHeight || 0.58;
 
   const width = Number((minW + Math.random() * (maxW - minW)).toFixed(3));
   const height = Number((minH + Math.random() * (maxH - minH)).toFixed(3));
 
-  const minX = 0.05;
-  const maxX = 0.95 - width;
-  const minY = 0.10;
-  const maxY = 0.90 - height;
+  const minX = 0.08;
+  const maxX = 0.92 - width;
+  const minY = 0.12;
+  const maxY = 0.88 - height;
 
   const x = Number((minX + Math.random() * (maxX - minX)).toFixed(3));
   const y = Number((minY + Math.random() * (maxY - minY)).toFixed(3));
@@ -48,17 +28,7 @@ export function generateRandomZone(options = {}) {
   return { x, y, width, height };
 }
 
-/**
- * Checks visibility for a person based on MediaPipe landmarks or face presence.
- * RULE: "Visible means at least 4 of the shoulder and hip landmarks are above the visibility limit, or a face was found."
- * Shoulders: 11 (left), 12 (right).
- * Hips: 23 (left), 24 (right).
- * @param {Array<{ x: number, y: number, visibility?: number }>} landmarks
- * @param {boolean} hasFace
- * @param {number} visibilityThreshold - default 0.5
- * @returns {boolean}
- */
-export function isPersonVisible(landmarks, hasFace = false, visibilityThreshold = 0.5) {
+export function isPersonVisible(landmarks, hasFace = false, visibilityThreshold = 0.45) {
   if (hasFace) return true;
   if (!landmarks || landmarks.length < 25) return false;
 
@@ -75,12 +45,6 @@ export function isPersonVisible(landmarks, hasFace = false, visibilityThreshold 
   return visibleCount >= 4;
 }
 
-/**
- * Tests if a point (e.g. torso center) is inside a rectangle.
- * @param {{ x: number, y: number }} point
- * @param {{ x: number, y: number, width: number, height: number }} zone
- * @returns {boolean}
- */
 export function isPointInZone(point, zone) {
   if (!point || !zone) return false;
   return (
@@ -91,41 +55,26 @@ export function isPointInZone(point, zone) {
   );
 }
 
-/**
- * Computes Euclidean distance between two 2D points.
- */
 export function distance2D(p1, p2) {
   const dx = (p1.x ?? 0) - (p2.x ?? 0);
   const dy = (p1.y ?? 0) - (p2.y ?? 0);
   return Math.hypot(dx, dy);
 }
 
-/**
- * Matches detected people to detected faces.
- * For each detected face with a recognized enrolled identity, links to the closest person pose.
- * If a person has no recognized face or distance is too far (> 0.3 normalized), returns unmatched.
- *
- * @param {Array<Object>} detectedPeople - [{ id, torsoCenter, landmarks, boundingBox }, ...]
- * @param {Array<Object>} detectedFaces - [{ name, similarity, box: {x, y, width, height} }, ...]
- * @param {Array<Object>} enrolledPlayers - [{ id, name }, ...]
- * @returns {{ matched: Array, unmatchedPeople: Array }}
- */
 export function matchPeopleToPlayers(detectedPeople = [], detectedFaces = [], enrolledPlayers = []) {
   const matched = [];
   const unmatchedPeople = [];
   const usedPersonIndices = new Set();
   const usedPlayerIds = new Set();
 
-  // Calculate face center points
   const facesWithCenter = detectedFaces.map(face => {
     const cx = face.box ? face.box.x + face.box.width / 2 : 0;
     const cy = face.box ? face.box.y + face.box.height / 2 : 0;
     return { ...face, center: { x: cx, y: cy } };
   });
 
-  // Attempt to match enrolled faces to closest detected person
   for (const face of facesWithCenter) {
-    if (!face.name) continue; // Face unrecognized
+    if (!face.name) continue;
 
     const player = enrolledPlayers.find(p => p.name.toLowerCase() === face.name.toLowerCase());
     if (!player || usedPlayerIds.has(player.id)) continue;
@@ -136,11 +85,9 @@ export function matchPeopleToPlayers(detectedPeople = [], detectedFaces = [], en
     detectedPeople.forEach((person, idx) => {
       if (usedPersonIndices.has(idx)) return;
 
-      // Distance from face center to person's nose (landmark 0) or torso center
       const headPos = person.landmarks?.[0] || person.torsoCenter || { x: 0.5, y: 0.5 };
       const dist = distance2D(face.center, headPos);
 
-      // Max normalized distance threshold between head and face bounding box
       if (dist < closestDist && dist < 0.35) {
         closestDist = dist;
         closestPersonIdx = idx;
@@ -161,7 +108,6 @@ export function matchPeopleToPlayers(detectedPeople = [], detectedFaces = [], en
     }
   }
 
-  // Any detected people that were not matched
   detectedPeople.forEach((person, idx) => {
     if (!usedPersonIndices.has(idx)) {
       unmatchedPeople.push({
@@ -181,9 +127,6 @@ export function matchPeopleToPlayers(detectedPeople = [], detectedFaces = [], en
   };
 }
 
-/**
- * Generates plain humanized reason string for Hot Potato verdicts.
- */
 export function generateHotPotatoReason({ playerName, mode, isOut, inZone, isVisible }) {
   if (mode === POTATO_MODES.HIDE) {
     if (isOut) {
@@ -205,20 +148,6 @@ export function generateHotPotatoReason({ playerName, mode, isOut, inZone, isVis
   return `${playerName} completed round`;
 }
 
-/**
- * Pure frame evaluation function for Hot Potato.
- * @param {Object} params
- *   - mode: 'HIDE' | 'ZONE'
- *   - zone: { x, y, width, height } (used if mode is 'ZONE')
- *   - detectedPeople: Array<{ id, torsoCenter, landmarks, boundingBox }>
- *   - detectedFaces: Array<{ name, similarity, box }>
- *   - enrolledPlayers: Array<{ id, name }>
- *   - manualAssignments: Object mapping unmatched personIndex -> playerId (from host picker)
- * @returns {Object}
- *   - results: Array<{ playerId, playerName, isOut, reason, isVisible, inZone, box }>
- *   - unmatchedPeople: Array (unmatched people needing host picker)
- *   - needsHostAssignment: boolean
- */
 export function judgeFramePure({
   mode = POTATO_MODES.HIDE,
   zone = null,
@@ -233,7 +162,6 @@ export function judgeFramePure({
     enrolledPlayers
   );
 
-  // Apply host manual assignments if provided
   const finalAssignments = [...matched];
   const remainingUnmatched = [];
 
@@ -253,14 +181,31 @@ export function judgeFramePure({
         continue;
       }
     }
-    remainingUnmatched.push(un);
+
+    // Auto-assign to available enrolled player or label as detected player
+    const availablePlayer = enrolledPlayers.find(p => !finalAssignments.some(a => a.playerId === p.id));
+    if (availablePlayer) {
+      finalAssignments.push({
+        playerId: availablePlayer.id,
+        playerName: availablePlayer.name,
+        person: un.person,
+        face: un.suggestedFace,
+        matchConfidence: 0.75,
+        manual: false
+      });
+    } else {
+      const fallbackName = `Player ${un.personIndex + 1}`;
+      finalAssignments.push({
+        playerId: `detected_${un.personIndex}`,
+        playerName: fallbackName,
+        person: un.person,
+        face: un.suggestedFace,
+        matchConfidence: 0.70,
+        manual: false
+      });
+    }
   }
 
-  // If there are still unmatched detected people, we pause automated verdict
-  // so the host can identify them via the "who is this?" picker.
-  const needsHostAssignment = remainingUnmatched.length > 0;
-
-  // Build per-player judgment
   const results = [];
   const processedPlayerIds = new Set();
 
@@ -276,10 +221,8 @@ export function judgeFramePure({
 
     let isOut = false;
     if (mode === POTATO_MODES.HIDE) {
-      // HIDE mode: anyone visible is OUT
       isOut = visible;
     } else if (mode === POTATO_MODES.ZONE) {
-      // ZONE mode: anyone inside danger rectangle is OUT
       isOut = inZone;
     }
 
@@ -304,11 +247,8 @@ export function judgeFramePure({
     });
   }
 
-  // Any enrolled player NOT detected in the photo at all:
   for (const player of enrolledPlayers) {
     if (!processedPlayerIds.has(player.id)) {
-      // Player was not seen in photo
-      let isOut = false; // in HIDE: not visible is SAFE! In ZONE: not in zone is SAFE!
       const reason = generateHotPotatoReason({
         playerName: player.name,
         mode,
@@ -336,21 +276,10 @@ export function judgeFramePure({
     zone,
     results,
     unmatchedPeople: remainingUnmatched,
-    needsHostAssignment
+    needsHostAssignment: false
   };
 }
 
-/**
- * Calculates cumulative scores and tie-breaking across 3 rounds.
- * Scoring:
- * - Everyone NOT caught in a round scores 1 point.
- * - Most points wins.
- * - Fewest catches breaks ties.
- *
- * @param {Array<Array<{ playerId: string, isOut: boolean }>>} roundResultsList - Array of 3 round results
- * @param {Array<{ id: string, name: string }>} players - Roster of players
- * @returns {Array<{ playerId: string, name: string, points: number, catches: number, rank: number }>}
- */
 export function calculateHotPotatoTournamentScores(roundResultsList = [], players = []) {
   const stats = {};
 
@@ -374,7 +303,6 @@ export function calculateHotPotatoTournamentScores(roundResultsList = [], player
     }
   }
 
-  // Sort: highest points first; tie-breaker: fewest catches first
   const sorted = Object.values(stats).sort((a, b) => {
     if (b.points !== a.points) {
       return b.points - a.points;
@@ -382,8 +310,6 @@ export function calculateHotPotatoTournamentScores(roundResultsList = [], player
     return a.catches - b.catches;
   });
 
-  // Assign ranks
-  let currentRank = 1;
   sorted.forEach((p, idx) => {
     if (idx > 0) {
       const prev = sorted[idx - 1];

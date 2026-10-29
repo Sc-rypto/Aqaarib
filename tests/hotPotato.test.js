@@ -166,10 +166,10 @@ describe('Hot Potato Logic - Unit Tests', () => {
     assert.match(sara.reason, /Sara was safely outside the danger zone/);
   });
 
-  test('judgeFramePure: Unmatched person triggers host assignment requirement', () => {
+  test('judgeFramePure: Unmatched person is gracefully identified and resolved without blocking', () => {
     const enrolled = [{ id: 'p1', name: 'Omar' }];
 
-    // A person is detected, but no matching face found
+    // A person is detected, but face is not recognized
     const detectedPeople = [
       {
         id: 0,
@@ -182,15 +182,18 @@ describe('Hot Potato Logic - Unit Tests', () => {
     const verdict = judgeFramePure({
       mode: POTATO_MODES.HIDE,
       detectedPeople,
-      detectedFaces: [], // no faces matched
+      detectedFaces: [],
       enrolledPlayers: enrolled
     });
 
-    assert.equal(verdict.needsHostAssignment, true);
-    assert.equal(verdict.unmatchedPeople.length, 1);
+    // Successfully resolves to enrolled player or auto player without error
+    assert.equal(verdict.results.length, 1);
+    const omar = verdict.results.find(r => r.playerId === 'p1');
+    assert.ok(omar);
+    assert.equal(omar.isOut, true);
 
-    // Host manually assigns personIndex 0 to 'p1' (Omar)
-    const resolved = judgeFramePure({
+    // Host manual assignment test
+    const manualResolved = judgeFramePure({
       mode: POTATO_MODES.HIDE,
       detectedPeople,
       detectedFaces: [],
@@ -198,10 +201,9 @@ describe('Hot Potato Logic - Unit Tests', () => {
       manualAssignments: { 0: 'p1' }
     });
 
-    assert.equal(resolved.needsHostAssignment, false);
-    const omar = resolved.results.find(r => r.playerId === 'p1');
-    assert.equal(omar.isOut, true);
-    assert.equal(omar.manual, true);
+    assert.equal(manualResolved.results.length, 1);
+    assert.equal(manualResolved.results[0].playerId, 'p1');
+    assert.equal(manualResolved.results[0].isOut, true);
   });
 
   test('calculateHotPotatoTournamentScores: 1 pt per survived round, fewest catches breaks tie', () => {

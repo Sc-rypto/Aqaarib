@@ -1,9 +1,6 @@
 /**
- * Game 2: Hot Potato
- * /games/hot_potato.js - Person B Implementation
- *
- * Connects vision layer (poseTracker, faceMatch), pure rule engine (hotPotato.js),
- * and core stubs (inputSource, evidence, audio, report).
+ * Aqaarib Games - Hot Potato (Photo Freeze)
+ * Manages accelerating countdown, snap photo capture, and visual highlighting.
  */
 
 import { poseTracker } from '../vision/poseTracker.js';
@@ -12,39 +9,21 @@ import {
   POTATO_MODES,
   generateRandomZone,
   judgeFramePure,
-  calculateHotPotatoTournamentScores,
-  generateHotPotatoReason
+  calculateHotPotatoTournamentScores
 } from './logic/hotPotato.js';
 import { inputSource } from '../dev/stubs/inputSource.js';
 import { captureStill, drawEvidenceAnnotations, saveEvidence, getEvidenceList, clearEvidence } from '../dev/stubs/evidence.js';
 import { audio } from '../dev/stubs/audio.js';
 import { createReport } from '../dev/stubs/report.js';
 
-/**
- * Standard judgeFrame function as required by the specification:
- * Runs pose and face recognition on that one frame, evaluates visibility and zone,
- * and matches each person to an enrolled player.
- *
- * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} image
- * @param {'HIDE'|'ZONE'} mode
- * @param {{ x, y, width, height }|null} zone
- * @param {Array<{ id: string, name: string }>} players
- * @param {Object} manualAssignments - Optional manual host assignments
- * @returns {Promise<Object>}
- */
 export async function judgeFrame(image, mode, zone, players, manualAssignments = {}) {
-  // 1. Ensure vision modules are ready in image mode
   await poseTracker.init();
   await poseTracker.setRunningMode('IMAGE');
   await faceMatcher.init();
 
-  // 2. Run Pose Landmarker on the still frame
   const detectedPeople = poseTracker.detect(image, performance.now());
-
-  // 3. Run Human Face Identification on the still frame
   const detectedFaces = await faceMatcher.identify(image);
 
-  // 4. Run pure rule matching
   const verdict = judgeFramePure({
     mode,
     zone,
@@ -60,14 +39,14 @@ export async function judgeFrame(image, mode, zone, players, manualAssignments =
 export class HotPotatoGame {
   constructor(options = {}) {
     this.totalRounds = 3;
-    this.currentRound = 0; // 0 = unstarted, 1, 2, 3
+    this.currentRound = 0;
     this.players = options.players || [
       { id: 'p1', name: 'Omar' },
       { id: 'p2', name: 'Sara' },
       { id: 'p3', name: 'Leo' }
     ];
 
-    this.roundResultsHistory = []; // Array of round results
+    this.roundResultsHistory = [];
     this.events = [];
     this.sessionStartTimeMs = 0;
 
@@ -75,16 +54,13 @@ export class HotPotatoGame {
     this.currentZone = null;
     this.roundActive = false;
     this.isCountingDown = false;
-    this.pendingJudgement = null; // Stored when "Who is this?" host modal is open
+    this.lastJudgedImageUri = null;
 
-    // Input mode: 'CAMERA' or 'VIDEO_FILE'
     this.inputMode = options.inputMode || 'CAMERA';
 
-    // Callbacks
     this.onStateChange = options.onStateChange || (() => {});
     this.onEvent = options.onEvent || (() => {});
     this.onEvidenceCaptured = options.onEvidenceCaptured || (() => {});
-    this.onHostPickerNeeded = options.onHostPickerNeeded || (() => {});
   }
 
   async init() {
@@ -103,18 +79,27 @@ export class HotPotatoGame {
     this.inputMode = mode;
   }
 
-  /**
-   * Enrolls a player's face photo into memory.
-   */
   async enrollPlayer(playerObj, imageSource) {
     const res = await faceMatcher.enroll(playerObj.name, imageSource);
     return res;
   }
 
-  /**
-   * Starts a round: picks random mode (HIDE or ZONE), generates zone if needed,
-   * announces mode, and in camera mode triggers the hidden accelerating timer.
-   */
+  async narrateRules(onStep = () => {}) {
+    const steps = [
+      { step: 1, text: "Welcome to Hot Potato! Each round has a secret, accelerating timer." },
+      { step: 2, text: "Listen carefully to the beeps as they speed up!" },
+      { step: 3, text: "When the buzzer fires, the camera immediately snaps a freeze photo." },
+      { step: 4, text: "In Hide Mode, make sure no one is visible. In Zone Mode, avoid the red danger box!" },
+      { step: 5, text: "Anyone caught in the frame is out for the round. Survive to score points!" }
+    ];
+
+    for (const item of steps) {
+      onStep(item);
+      await audio.speak(item.text);
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }
+
   startRound() {
     if (this.currentRound >= this.totalRounds) {
       this.resetTournament();
@@ -130,16 +115,14 @@ export class HotPotatoGame {
     this.currentRound += 1;
     this.roundActive = true;
 
-    // Pick random mode: HIDE or ZONE
     this.currentMode = Math.random() > 0.5 ? POTATO_MODES.HIDE : POTATO_MODES.ZONE;
 
-    // In ZONE mode, generate and display random danger rectangle before timer starts
     if (this.currentMode === POTATO_MODES.ZONE) {
       this.currentZone = generateRandomZone();
-      audio.speak(`Round ${this.currentRound}: Danger Zone mode! Avoid the red rectangle!`);
+      audio.speak(`Round ${this.currentRound}: Danger Zone mode! Avoid the red box!`);
     } else {
       this.currentZone = null;
-      audio.speak(`Round ${this.currentRound}: Hide mode! Anyone visible is out!`);
+      audio.speak(`Round ${this.currentRound}: Hide mode! Get out of sight!`);
     }
 
     this.onStateChange(this.getState());
@@ -151,8 +134,8 @@ export class HotPotatoGame {
 
   _startCameraRoundTimer() {
     this.isCountingDown = true;
-    // Hidden timer between 10s and 30s
-    const timerDurationMs = Math.round(10000 + Math.random() * 20000);
+    // Faster timer: 5 to 9 seconds with rapid acceleration
+    const timerDurationMs = Math.round(5000 + Math.random() * 4000);
 
     audio.startAcceleratingBeeps({
       totalDurationMs: timerDurationMs,
@@ -161,81 +144,62 @@ export class HotPotatoGame {
       },
       onComplete: () => {
         this.isCountingDown = false;
-        audio.speak('Snap! Photo taken!');
+        audio.speak('Snap! Photo captured!');
         this.captureAndJudgeLiveFrame();
       }
     });
   }
 
-  /**
-   * Captures the current live frame from camera and judges it.
-   */
   async captureAndJudgeLiveFrame() {
     const video = inputSource.getVideoElement();
-    if (!video) {
-      console.warn('No active camera video element found to capture');
-      return;
-    }
+    if (!video) return;
 
     const stillCanvas = captureStill(video, { width: 640, height: 480 });
     await this.processJudgement(stillCanvas);
   }
 
-  /**
-   * For video_file mode: judges a specific frame from recorded video.
-   */
   async judgeSpecificFrame(videoOrCanvas) {
     const stillCanvas = captureStill(videoOrCanvas, { width: 640, height: 480 });
     await this.processJudgement(stillCanvas);
   }
 
-  /**
-   * Processes still frame judgment, handles host assignment if needed,
-   * annotates evidence, and records scores.
-   */
-  async processJudgement(stillCanvas, manualAssignments = {}) {
+  async processJudgement(stillCanvas) {
     const verdict = await judgeFrame(
       stillCanvas,
       this.currentMode,
       this.currentZone,
-      this.players,
-      manualAssignments
+      this.players
     );
 
-    // If there are people seen but faces not recognized, pause for host picker
-    if (verdict.needsHostAssignment) {
-      this.pendingJudgement = {
-        stillCanvas,
-        verdict
-      };
-      this.onHostPickerNeeded({
-        stillCanvas,
-        unmatchedPeople: verdict.unmatchedPeople,
-        enrolledPlayers: this.players
-      });
-      return;
-    }
-
-    // All players resolved for this round
-    this.pendingJudgement = null;
     this.roundResultsHistory.push(verdict.results);
 
-    // Generate evidence snapshot with annotations
+    // Draw prominent highlight rectangles over detected people
     const annotatedCanvas = captureStill(stillCanvas, { width: 640, height: 480 });
     drawEvidenceAnnotations(annotatedCanvas, {
       dangerZone: this.currentZone,
       boxes: verdict.results.map(r => ({
-        ...(r.box || { x: 0.4, y: 0.2, width: 0.2, height: 0.6 }),
+        ...(r.box || { x: 0.35, y: 0.2, width: 0.3, height: 0.6 }),
         label: r.playerName,
         isOut: r.isOut,
         reason: r.reason
       })),
-      watermarkText: `Hot Potato R${this.currentRound} [${this.currentMode}]`
+      watermarkText: `Aqaarib Hot Potato • Round ${this.currentRound} (${this.currentMode})`
     });
 
-    const dataUri = annotatedCanvas.toDataURL('image/jpeg', 0.85);
+    const dataUri = annotatedCanvas.toDataURL('image/jpeg', 0.90);
+    this.lastJudgedImageUri = dataUri;
 
-    // Save evidence card
+    // Check who was caught vs safe
+    const caughtPlayers = verdict.results.filter(r => r.isOut);
+    const safePlayers = verdict.results.filter(r => !r.isOut);
+
+    if (caughtPlayers.length > 0) {
+      const names = caughtPlayers.map(p => p.playerName).join(', ');
+      audio.speak(`${names} caught out!`);
+    } else {
+      audio.speak('Everyone survived this round!');
+    }
+
     verdict.results.forEach(res => {
       const evItem = saveEvidence({
         title: `Round ${this.currentRound}: ${res.playerName}`,
@@ -257,33 +221,28 @@ export class HotPotatoGame {
       this.onEvent(evItem);
     });
 
-    this.onEvidenceCaptured(verdict);
+    this.onEvidenceCaptured({
+      ...verdict,
+      imageUri: dataUri,
+      caughtPlayers,
+      safePlayers
+    });
     this.roundActive = false;
 
-    // Check if tournament is over (3 rounds)
     if (this.currentRound >= this.totalRounds) {
       this._handleTournamentOver();
     } else {
-      audio.speak(`Round ${this.currentRound} complete! Ready for next round.`);
+      audio.speak(`Round ${this.currentRound} complete.`);
     }
 
-    this.onStateChange(this.getState());
-  }
-
-  /**
-   * Resolves host manual picker and resumes judgment.
-   */
-  async resolveHostPicker(manualAssignments) {
-    if (!this.pendingJudgement) return;
-    const { stillCanvas } = this.pendingJudgement;
-    await this.processJudgement(stillCanvas, manualAssignments);
+    this.onStateChange(this.getState({ lastJudgedImageUri: dataUri, verdict }));
   }
 
   _handleTournamentOver() {
     const scores = calculateHotPotatoTournamentScores(this.roundResultsHistory, this.players);
     const winner = scores[0];
 
-    audio.speak(`Tournament complete! The winner is ${winner.name} with ${winner.points} points!`);
+    audio.speak(`Game over! The winner is ${winner.name} with ${winner.points} points!`);
     audio.beep({ frequency: 783.99, duration: 0.5 });
 
     const finalReport = this.exportResult();
@@ -296,7 +255,7 @@ export class HotPotatoGame {
     this.events = [];
     this.roundActive = false;
     this.isCountingDown = false;
-    this.pendingJudgement = null;
+    this.lastJudgedImageUri = null;
     clearEvidence();
   }
 
@@ -313,7 +272,7 @@ export class HotPotatoGame {
       players: this.players,
       standings,
       history: this.roundResultsHistory,
-      needsHostAssignment: Boolean(this.pendingJudgement),
+      lastJudgedImageUri: this.lastJudgedImageUri,
       ...extra
     };
   }
