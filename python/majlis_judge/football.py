@@ -4,6 +4,7 @@ tracks ball possession and goal detections, and produces a validated signed repo
 
 import math
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cv2
@@ -12,6 +13,14 @@ from sklearn.cluster import KMeans
 from ultralytics import YOLO
 
 from .common import ColorTracker, EvidenceCollector, VideoReader, create_report, sign_report
+
+
+def clean_referee_reason(text: str) -> str:
+    """Sanitizes text to adhere to Kinship project referee tone: no emojis and no dash punctuation."""
+    text = text.replace("—", " ").replace("–", " ").replace(" - ", " ").replace("-", " ")
+    text = re.sub(r"[\U00010000-\U0010ffff]", "", text)
+    text = re.sub(r"[\u2600-\u26ff]", "", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def parse_box_coords(
@@ -263,7 +272,9 @@ class FootballReferee:
                 self.frames_inside_goal_a = 0
 
                 scorer_name = self.last_possessor_team_a or "Team A Player"
-                reason = f"GOAL! Team A scored into Goal A (last possessor: {scorer_name}). Ball inside goal for 3 frames."
+                reason = clean_referee_reason(
+                    f"GOAL! Team A scored into Goal A. Last possessor: {scorer_name}. Ball confirmed in goal box for 3 frames."
+                )
                 goal_event = {
                     "type": "GOAL",
                     "teamId": "team_a",
@@ -287,7 +298,9 @@ class FootballReferee:
                 self.frames_inside_goal_b = 0
 
                 scorer_name = self.last_possessor_team_b or "Team B Player"
-                reason = f"GOAL! Team B scored into Goal B (last possessor: {scorer_name}). Ball inside goal for 3 frames."
+                reason = clean_referee_reason(
+                    f"GOAL! Team B scored into Goal B. Last possessor: {scorer_name}. Ball confirmed in goal box for 3 frames."
+                )
                 goal_event = {
                     "type": "GOAL",
                     "teamId": "team_b",
@@ -336,7 +349,9 @@ class FootballReferee:
                     "team": p_team,
                     "possessionSeconds": round(float(best_sec), 1),
                     "touches": best_touches,
-                    "reason": f"Player #{best_pid} ({p_team}) led the match with {best_sec:.1f}s of confirmed possession and {best_touches} touches.",
+                    "reason": clean_referee_reason(
+                        f"Player {best_pid} ({p_team}) led the match with {best_sec:.1f}s of confirmed possession and {best_touches} touches."
+                    ),
                 }
 
         # Formatted seconds per player

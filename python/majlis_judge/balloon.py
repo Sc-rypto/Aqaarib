@@ -3,12 +3,21 @@ Color clearance pre-check, trajectory tracking, inflection-based hit detection,
 apex validation above target line, ground line termination, and signed report generation."""
 
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 
 from .common import ColorTracker, EvidenceCollector, VideoReader, create_report, sign_report
+
+
+def clean_referee_reason(text: str) -> str:
+    """Sanitizes text to adhere to Kinship project referee tone: no emojis and no dash punctuation."""
+    text = text.replace("—", " ").replace("–", " ").replace(" - ", " ").replace("-", " ")
+    text = re.sub(r"[\U00010000-\U0010ffff]", "", text)
+    text = re.sub(r"[\u2600-\u26ff]", "", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 class ColorClearanceError(Exception):
