@@ -129,7 +129,7 @@ def test_sign_and_verify_report(tmp_path):
     # Verification with wrong key should fail
     is_valid_wrong, msg_wrong = verify_report(signed, "wrong_key")
     assert is_valid_wrong is False
-    assert "mismatch" in msg_wrong.lower()
+    assert "invalid" in msg_wrong.lower() or "incorrect" in msg_wrong.lower()
 
     # Tampering should fail
     tampered = dict(signed)
