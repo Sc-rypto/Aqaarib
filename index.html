@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kinship • Family Motion Hub</title>
+  <link rel="stylesheet" href="css/kinship.css"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"/>
+  <style>
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(224, 109, 83, 0.08), rgba(221, 167, 79, 0.08));
+      border: 1px solid var(--border-color);
+      border-radius: 1.25rem;
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: var(--card-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 1.75rem;
+    }
+    .game-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+    }
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin: 1.25rem 0;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.92rem;
+      color: var(--on-surface-variant);
+    }
+    .feature-item .material-symbols-outlined {
+      color: var(--secondary-accent);
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="kinship-header">
+    <a href="index.html" class="brand-title">
+      <span class="material-symbols-outlined" style="color: var(--primary-accent); font-size: 1.8rem;">family_star</span>
+      Kinship
+    </a>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <span class="brand-badge">Living Vision Hub</span>
+      <button id="themeToggle" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+        <span class="material-symbols-outlined" style="font-size: 1.1rem;">dark_mode</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="page-container">
+    <!-- Hero Pitch Section -->
+    <section class="hero-banner">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span class="pill-badge green">
+          <span class="material-symbols-outlined" style="font-size: 0.9rem;">check_circle</span>
+          Zero Cost • 100% Client-Side • Privacy-Preserving
+        </span>
+      </div>
+      <h1 style="font-family: var(--font-serif); font-size: 2.75rem; font-weight: 500; line-height: 1.15; letter-spacing: -0.025em;">
+        Tactile motion play for the modern family hearth.
+      </h1>
+      <p style="font-size: 1.05rem; color: var(--on-surface-variant); max-width: 760px; line-height: 1.6;">
+        Two interactive browser games powered by one unified vision layer. Utilizing client-side MediaPipe Pose Landmarker and Vladimir Mandic Human face identification with zero cloud dependencies and zero subscriptions.
+      </p>
+    </section>
+
+    <!-- Game Selection Cards -->
+    <div class="game-grid">
+      <!-- Game 1: Red Light -->
+      <div class="kinship-card game-card">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+            <span class="pill-badge red">Game 1 • Multi-Lane</span>
+            <span class="brand-badge">2 to 4 Players</span>
+          </div>
+
+          <h2 class="card-title" style="font-size: 1.65rem;">
+            <span class="material-symbols-outlined" style="color: var(--primary-accent);">traffic</span>
+            Red Light, Green Light
+          </h2>
+          <p class="card-subtitle">
+            Physical family referee system with floor tape lanes, random light cadence, and strict motion judging.
+          </p>
+
+          <ul class="feature-list">
+            <li class="feature-item">
+              <span class="material-symbols-outlined">straighten</span>
+              <span><strong>Vertical Lanes:</strong> Ensures players maintain lanes without crossing.</span>
+            </li>
+            <li class="feature-item">
+              <span class="material-symbols-outlined">speed</span>
+              <span><strong>3-Second Calibration:</strong> Noise floor & walking speed calibration.</span>
+            </li>
+            <li class="feature-item">
+              <span class="material-symbols-outlined">security</span>
+              <span><strong>Fair Refereeing:</strong> 0.5s grace period; 3 consecutive frames required.</span>
+            </li>
+            <li class="feature-item">
+              <span class="material-symbols-outlined">flag</span>
+              <span><strong>Finish Detection:</strong> Mid-hip crossing with rank points minus strikes.</span>
+            </li>
+            <li class="feature-item">
+              <span class="material-symbols-outlined">video_camera_back</span>
+              <span><strong>MediaRecorder:</strong> Automatically records session for family download.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+          <a href="dev/red_light.html" class="btn-primary" style="flex: 1; justify-content: center;">
+            <span class="material-symbols-outlined">play_arrow</span>
+            Launch Red Light
+          </a>
+        </div>
+      </div>
+
+      <!-- Game 2: Hot Potato -->
+      <div class="kinship-card game-card">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+            <span class="pill-badge yellow">Game 2 • Face Matching</span>
+            <span class="brand-badge">3 Rounds</span>
+          </div>
+
+          <h2 class="card-title" style="font-size: 1.65rem;">
+            <span class="material-symbols-outlined" style="color: var(--primary-accent);">local_fire_department</span>
+            Hot Potato (Photo Freeze)
+          </h2>
+          <p class="card-subtitle">
+            Suspenseful accelerating timer with snap photo evaluation, face recognition, and host override.
+          </p>
+
+          <ul class="feature-list">
+            <li class="feature-item">
+              <span class="material-symbols-outlined">hourglass_bottom</span>
+              <span><strong>Accelerating Audio Ticks:</strong> Hidden 10-30s countdown with beeps.</span>
+            </li>
+            <li class="feature-item">
+              <span class="material-symbols-outlined">shuffle</span>
+              <span><strong>Two Game Modes:</strong> Random HIDE mode and ZONE danger rectangle.</span>
+            </li>
+            <li class="feature-item">
+              <span class="material-symbols-outlined">face</span>
+              <span><strong>Face Enrollment:</strong> Enrolls facial embeddings with Human.js.</span>
+            </li>
+            <li class="feature-item">
+              <span class="material-symbols-outlined">contact_support</span>
+              <span><strong>"Who is this?" Picker:</strong> Host resolves unrecognized players safely.</span>
+            </li>
+            <li class="feature-item">
+              <span class="material-symbols-outlined">movie</span>
+              <span><strong>Dual Inputs:</strong> Supports live camera or scrubbed video files.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+          <a href="dev/hot_potato.html" class="btn-primary" style="flex: 1; justify-content: center;">
+            <span class="material-symbols-outlined">play_arrow</span>
+            Launch Hot Potato
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vision Architecture Specification Card -->
+    <div class="kinship-card">
+      <h2 class="card-title">
+        <span class="material-symbols-outlined" style="color: var(--secondary-accent);">hub</span>
+        Shared Vision Layer Architecture (/vision)
+      </h2>
+      <p class="card-subtitle">
+        Both games run on identical frozen interfaces, sharing vision tracking and evidence generation.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+        <div style="background: var(--surface-container); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--border-color);">
+          <h3 style="font-family: var(--font-label); font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem;">
+            /vision/poseTracker.js
+          </h3>
+          <p style="font-size: 0.85rem; color: var(--on-surface-variant); line-height: 1.45;">
+            Wraps MediaPipe Pose Landmarker in video and still image modes. Tracks up to 4 individuals simultaneously at 15 FPS reduced resolution.
+          </p>
+        </div>
+
+        <div style="background: var(--surface-container); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--border-color);">
+          <h3 style="font-family: var(--font-label); font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem;">
+            /vision/motion.js
+          </h3>
+          <p style="font-size: 0.85rem; color: var(--on-surface-variant); line-height: 1.45;">
+            Scale-invariant motion metric evaluated on 8 body joints divided by shoulder width. Includes 6s calibration routine.
+          </p>
+        </div>
+
+        <div style="background: var(--surface-container); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--border-color);">
+          <h3 style="font-family: var(--font-label); font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem;">
+            /vision/faceMatch.js
+          </h3>
+          <p style="font-size: 0.85rem; color: var(--on-surface-variant); line-height: 1.45;">
+            Wraps Vladimir Mandic Human library. Memory enrollment and cosine similarity matching with normalized bounding boxes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Floating Capsule Dock -->
+  <nav class="floating-dock">
+    <a href="index.html" class="dock-item active">
+      <span class="material-symbols-outlined">home</span>
+      Hub
+    </a>
+    <a href="dev/red_light.html" class="dock-item">
+      <span class="material-symbols-outlined">traffic</span>
+      Red Light
+    </a>
+    <a href="dev/hot_potato.html" class="dock-item">
+      <span class="material-symbols-outlined">timer</span>
+      Hot Potato
+    </a>
+  </nav>
+
+  <script>
+    const themeBtn = document.getElementById('themeToggle');
+    themeBtn.addEventListener('click', () => {
+      const isDark = document.body.dataset.theme === 'dark';
+      document.body.dataset.theme = isDark ? 'light' : 'dark';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,407 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..800;1,300..800&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+:root {
+  --surface: #fff8f4;
+  --surface-dim: #e0d9d3;
+  --surface-bright: #fff8f4;
+  --surface-lowest: #ffffff;
+  --surface-low: #faf2ed;
+  --surface-container: #f4ece7;
+  --surface-high: #eee7e1;
+  --surface-highest: #e9e1dc;
+  --on-surface: #1e1b18;
+  --on-surface-variant: #57423d;
+  --outline: #8a726c;
+  --outline-variant: #ddc0ba;
+  --primary: #9e3c26;
+  --primary-accent: #e06d53;
+  --on-primary: #ffffff;
+  --primary-container: #be543c;
+  --on-primary-container: #fffbff;
+  --secondary: #536251;
+  --secondary-accent: #8a9a86;
+  --on-secondary: #ffffff;
+  --secondary-container: #d4e4ce;
+  --on-secondary-container: #586755;
+  --tertiary: #7c5400;
+  --tertiary-accent: #dda74f;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #9a6c17;
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --border-color: rgba(30, 27, 24, 0.08);
+  --border-subtle: rgba(30, 27, 24, 0.05);
+  --card-shadow: 0 2px 8px -2px rgba(45, 38, 30, 0.04), 0 8px 24px -4px rgba(45, 38, 30, 0.03);
+  --dock-shadow: 0 12px 36px -6px rgba(30, 27, 24, 0.12);
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-sans: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-label: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+[data-theme="dark"],
+.dark {
+  --surface: #121110;
+  --surface-dim: #171615;
+  --surface-bright: #1f1e1c;
+  --surface-lowest: #1a1918;
+  --surface-low: #151413;
+  --surface-container: #1e1d1b;
+  --surface-high: #242220;
+  --surface-highest: #2b2927;
+  --on-surface: #ededeb;
+  --on-surface-variant: #b5a8a3;
+  --outline: #9e8781;
+  --outline-variant: #4a3d39;
+  --primary: #f08c65;
+  --primary-accent: #ffb4a3;
+  --on-primary: #3d0600;
+  --secondary: #8a9a86;
+  --on-secondary: #111f11;
+  --tertiary: #f5bd62;
+  --tertiary-accent: #dda74f;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --card-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.45);
+  --dock-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.6);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--surface);
+  color: var(--on-surface);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-image: radial-gradient(rgba(30, 27, 24, 0.04) 1px, transparent 1px);
+  background-size: 16px 16px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Header & Top Bar */
+.kinship-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 248, 244, 0.85);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+[data-theme="dark"] .kinship-header {
+  background: rgba(18, 17, 16, 0.85);
+}
+
+.brand-title {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--on-surface);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
+.brand-badge {
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.6rem;
+  background: var(--surface-container);
+  color: var(--primary-accent);
+  border-radius: 9999px;
+  border: 1px solid var(--border-color);
+}
+
+/* Main Container */
+.page-container {
+  max-width: 1320px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* Tactile Cards */
+.kinship-card {
+  background: var(--surface-lowest);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  box-shadow: var(--card-shadow);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+[data-theme="dark"] .kinship-card {
+  background: var(--surface-low);
+}
+
+.card-title {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-subtitle {
+  font-size: 0.9rem;
+  color: var(--on-surface-variant);
+  margin-bottom: 1.25rem;
+}
+
+/* Buttons & Pills */
+.btn-primary {
+  font-family: var(--font-label);
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: var(--primary-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.65rem 1.4rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.btn-primary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+.btn-secondary {
+  font-family: var(--font-label);
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: var(--surface-container);
+  color: var(--on-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  padding: 0.65rem 1.4rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.btn-secondary:hover {
+  background: var(--surface-high);
+}
+
+.pill-badge {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.pill-badge.green {
+  background: rgba(83, 98, 81, 0.15);
+  color: #3b4e3a;
+  border: 1px solid rgba(83, 98, 81, 0.3);
+}
+.pill-badge.yellow {
+  background: rgba(221, 167, 79, 0.18);
+  color: #8c5d00;
+  border: 1px solid rgba(221, 167, 79, 0.4);
+}
+.pill-badge.red {
+  background: rgba(224, 109, 83, 0.18);
+  color: #b73215;
+  border: 1px solid rgba(224, 109, 83, 0.4);
+}
+
+/* Video & Camera Viewport with Lane Overlays */
+.camera-viewport-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 520px;
+  background: #000000;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.camera-viewport-wrap video,
+.camera-viewport-wrap canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.camera-overlay-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Red Light Signal Light Widget */
+.traffic-signal-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--surface-container);
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-color);
+}
+.light-bulb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  opacity: 0.25;
+  transition: all 0.25s ease;
+}
+.light-bulb.active {
+  opacity: 1;
+  box-shadow: 0 0 16px currentColor;
+  transform: scale(1.15);
+}
+.light-bulb.green { background: #2e7d32; color: #2e7d32; }
+.light-bulb.yellow { background: #f57f17; color: #f57f17; }
+.light-bulb.red { background: #d32f2f; color: #d32f2f; }
+
+/* Polaroid Framing for Evidence Gallery */
+.polaroid-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
+.polaroid-card {
+  background: var(--surface-lowest);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 0.75rem 1.75rem 0.75rem; /* Classic polaroid wider bottom */
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: transform 0.2s ease;
+}
+.polaroid-card:hover {
+  transform: translateY(-2px) rotate(-0.5deg);
+}
+
+.polaroid-img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  background: #2a2724;
+}
+
+.polaroid-caption {
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  color: var(--on-surface);
+  line-height: 1.25;
+}
+.polaroid-meta {
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  color: var(--on-surface-variant);
+}
+
+/* Floating Bottom Capsule Dock */
+.floating-dock {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  background: rgba(255, 248, 244, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  box-shadow: var(--dock-shadow);
+  z-index: 100;
+}
+[data-theme="dark"] .floating-dock {
+  background: rgba(18, 17, 16, 0.92);
+}
+
+.dock-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-label);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-decoration: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+.dock-item:hover,
+.dock-item.active {
+  color: var(--primary-accent);
+  background: var(--surface-container);
+}
+
+/* Modal styles for "Who is this?" host picker */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 27, 24, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 200;
+}
+.modal-content {
+  background: var(--surface-lowest);
+  border: 1px solid var(--border-color);
+  border-radius: 1.25rem;
+  box-shadow: var(--dock-shadow);
+  max-width: 520px;
+  width: 100%;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}

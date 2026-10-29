@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kinship • Red Light, Green Light</title>
+  <link rel="stylesheet" href="../css/kinship.css"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"/>
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="kinship-header">
+    <a href="../index.html" class="brand-title">
+      <span class="material-symbols-outlined" style="color: var(--primary-accent);">sports_score</span>
+      Kinship Motion Games
+    </a>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <span class="brand-badge">Person B • Standalone Dev Runner</span>
+      <button id="themeToggle" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+        <span class="material-symbols-outlined" style="font-size: 1.1rem;">dark_mode</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="page-container">
+    <!-- Header Banner -->
+    <div class="kinship-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 class="card-title">
+          <span class="material-symbols-outlined" style="color: var(--primary-accent);">traffic</span>
+          Red Light, Green Light
+        </h1>
+        <p class="card-subtitle">Vertical lanes • Random light pacing • Automatic motion judging & evidence capture</p>
+      </div>
+
+      <!-- Traffic Signal Display -->
+      <div class="traffic-signal-box">
+        <div id="lightRed" class="light-bulb red"></div>
+        <div id="lightYellow" class="light-bulb yellow"></div>
+        <div id="lightGreen" class="light-bulb green active"></div>
+        <span id="lightLabel" style="font-family: var(--font-label); font-weight: 700; margin-left: 0.5rem; text-transform: uppercase;">GREEN LIGHT</span>
+      </div>
+    </div>
+
+    <!-- Main Game & Camera Row -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;" id="mainGrid">
+      <!-- Camera & Overlay Viewport -->
+      <div class="kinship-card" style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+        <div class="camera-viewport-wrap">
+          <video id="webcamVideo" playsinline muted autoplay></video>
+          <canvas id="overlayCanvas"></canvas>
+        </div>
+
+        <!-- Live Status Bar below Camera -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="display: flex; gap: 0.5rem;" id="playerTagsContainer">
+            <!-- Dynamic player strike pills -->
+          </div>
+          <div style="font-family: var(--font-label); font-size: 0.82rem; color: var(--on-surface-variant);" id="systemInfo">
+            Vision: Ready (~15 FPS inference)
+          </div>
+        </div>
+      </div>
+
+      <!-- Host Controls Panel -->
+      <div class="kinship-card" style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <h2 class="card-title" style="font-size: 1.15rem;">
+          <span class="material-symbols-outlined">tune</span>
+          Host Controls & Calibration
+        </h2>
+
+        <!-- Lane Configuration -->
+        <div>
+          <label style="font-family: var(--font-label); font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.4rem;">
+            Lanes (2 to 4 Players)
+          </label>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn-secondary lane-select-btn" data-lanes="2">2 Lanes</button>
+            <button class="btn-secondary lane-select-btn active" data-lanes="3" style="border-color: var(--primary-accent);">3 Lanes</button>
+            <button class="btn-secondary lane-select-btn" data-lanes="4">4 Lanes</button>
+          </div>
+        </div>
+
+        <!-- Finish Line Slider -->
+        <div>
+          <div style="display: flex; justify-content: space-between; font-family: var(--font-label); font-size: 0.8rem; margin-bottom: 0.3rem;">
+            <span>Finish Line Height</span>
+            <span id="finishLineVal">80%</span>
+          </div>
+          <input type="range" id="finishSlider" min="50" max="95" value="80" style="width: 100%; accent-color: var(--primary-accent);"/>
+        </div>
+
+        <!-- Calibration Section -->
+        <div style="background: var(--surface-container); padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.6rem;">
+          <div style="font-family: var(--font-label); font-weight: 600; font-size: 0.85rem;">Step 1: Motion Calibration</div>
+          <p style="font-size: 0.8rem; color: var(--on-surface-variant);" id="calibPrompt">
+            Stand still for 3s to capture noise floor, then walk normally for 3s.
+          </p>
+          <button id="btnCalibrate" class="btn-secondary" style="width: 100%; justify-content: center;">
+            <span class="material-symbols-outlined">accessibility_new</span>
+            Run Calibration (6s)
+          </button>
+          <div id="calibMetrics" style="font-family: var(--font-label); font-size: 0.75rem; color: var(--on-surface-variant); display: none;">
+            Red Limit: <strong id="valRedLimit">--</strong> • Yellow Cap: <strong id="valYellowCap">--</strong>
+          </div>
+        </div>
+
+        <!-- Game Action Buttons -->
+        <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: auto;">
+          <button id="btnStartGame" class="btn-primary" style="justify-content: center; font-size: 1rem; padding: 0.85rem;">
+            <span class="material-symbols-outlined">play_arrow</span>
+            Start Game Round
+          </button>
+          <button id="btnStopGame" class="btn-secondary" style="justify-content: center; display: none;">
+            <span class="material-symbols-outlined">stop</span>
+            Stop Round
+          </button>
+          <button id="btnDownloadVideo" class="btn-secondary" style="justify-content: center; display: none;">
+            <span class="material-symbols-outlined">video_file</span>
+            Download Session Video
+          </button>
+          <button id="btnExportReport" class="btn-secondary" style="justify-content: center; display: none;">
+            <span class="material-symbols-outlined">download</span>
+            Export Result JSON
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evidence & Incident Gallery -->
+    <div class="kinship-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+          <h2 class="card-title">
+            <span class="material-symbols-outlined" style="color: var(--primary-accent);">photo_camera</span>
+            Incidents & Evidence Gallery
+          </h2>
+          <p class="card-subtitle" style="margin-bottom: 0;">Captured frames for strikes and finishes with plain reasons</p>
+        </div>
+        <span class="brand-badge" id="evidenceCountBadge">0 Snapshots</span>
+      </div>
+
+      <div class="polaroid-grid" id="evidenceGrid">
+        <p style="color: var(--on-surface-variant); font-size: 0.9rem; grid-column: 1 / -1; padding: 1rem 0;">
+          No violations or finishes recorded yet. Start a game round to capture live snapshots.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Floating Capsule Dock -->
+  <nav class="floating-dock">
+    <a href="../index.html" class="dock-item">
+      <span class="material-symbols-outlined">home</span>
+      Hub
+    </a>
+    <a href="red_light.html" class="dock-item active">
+      <span class="material-symbols-outlined">traffic</span>
+      Red Light
+    </a>
+    <a href="hot_potato.html" class="dock-item">
+      <span class="material-symbols-outlined">timer</span>
+      Hot Potato
+    </a>
+  </nav>
+
+  <script type="module">
+    import { RedLightGame } from '../games/red_light.js';
+    import { inputSource } from './stubs/inputSource.js';
+    import { downloadReportJson, validateReport } from './stubs/report.js';
+
+    // Theme Toggle
+    const themeBtn = document.getElementById('themeToggle');
+    themeBtn.addEventListener('click', () => {
+      const isDark = document.body.dataset.theme === 'dark';
+      document.body.dataset.theme = isDark ? 'light' : 'dark';
+    });
+
+    const videoEl = document.getElementById('webcamVideo');
+    const overlayCanvas = document.getElementById('overlayCanvas');
+    const overlayCtx = overlayCanvas.getContext('2d');
+
+    const lightRed = document.getElementById('lightRed');
+    const lightYellow = document.getElementById('lightYellow');
+    const lightGreen = document.getElementById('lightGreen');
+    const lightLabel = document.getElementById('lightLabel');
+
+    const btnStart = document.getElementById('btnStartGame');
+    const btnStop = document.getElementById('btnStopGame');
+    const btnCalib = document.getElementById('btnCalibrate');
+    const btnDownloadVideo = document.getElementById('btnDownloadVideo');
+    const btnExportReport = document.getElementById('btnExportReport');
+    const finishSlider = document.getElementById('finishSlider');
+    const finishLineVal = document.getElementById('finishLineVal');
+    const evidenceGrid = document.getElementById('evidenceGrid');
+    const evidenceCountBadge = document.getElementById('evidenceCountBadge');
+    const playerTagsContainer = document.getElementById('playerTagsContainer');
+
+    let game = null;
+    let finishLineY = 0.80;
+    let numLanes = 3;
+
+    // Initialize Camera
+    async function setupCamera() {
+      try {
+        await inputSource.startCamera({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+        });
+        const v = inputSource.getVideoElement();
+        videoEl.srcObject = v.srcObject;
+        await videoEl.play();
+
+        overlayCanvas.width = 640;
+        overlayCanvas.height = 480;
+
+        game = new RedLightGame({
+          numLanes,
+          finishLineY,
+          onStateChange: handleStateChange,
+          onEvidenceCaptured: renderEvidenceCard
+        });
+
+        await game.init(videoEl);
+        document.getElementById('systemInfo').innerText = 'Vision: Ready (Camera active)';
+      } catch (err) {
+        document.getElementById('systemInfo').innerText = 'Camera Error: ' + err.message;
+        console.error(err);
+      }
+    }
+
+    // Lane Selection
+    document.querySelectorAll('.lane-select-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.lane-select-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        numLanes = parseInt(btn.dataset.lanes, 10);
+        if (game) game.setNumLanes(numLanes);
+        renderLanes();
+      });
+    });
+
+    // Finish Slider
+    finishSlider.addEventListener('input', (e) => {
+      finishLineY = parseInt(e.target.value, 10) / 100;
+      finishLineVal.innerText = `${e.target.value}%`;
+      if (game) game.setFinishLine(finishLineY);
+    });
+
+    // Calibration Button
+    btnCalib.addEventListener('click', async () => {
+      btnCalib.disabled = true;
+      const promptEl = document.getElementById('calibPrompt');
+      try {
+        const res = await game.calibrate(({ phase, secondsLeft }) => {
+          if (phase === 'STILL') {
+            promptEl.innerHTML = `🧊 <strong>STAND STILL!</strong> Capturing noise floor (${secondsLeft}s)...`;
+          } else {
+            promptEl.innerHTML = `🚶 <strong>WALK NORMALLY!</strong> Measuring speed (${secondsLeft}s)...`;
+          }
+        });
+        promptEl.innerHTML = '✅ Calibration complete!';
+        document.getElementById('calibMetrics').style.display = 'block';
+        document.getElementById('valRedLimit').innerText = res.redLimit.toFixed(3);
+        document.getElementById('valYellowCap').innerText = res.yellowCap.toFixed(3);
+      } catch (err) {
+        promptEl.innerText = 'Calibration error: ' + err.message;
+      } finally {
+        btnCalib.disabled = false;
+      }
+    });
+
+    // Game Actions
+    btnStart.addEventListener('click', () => {
+      game.start();
+      btnStart.style.display = 'none';
+      btnStop.style.display = 'inline-flex';
+      btnDownloadVideo.style.display = 'none';
+      btnExportReport.style.display = 'none';
+      evidenceGrid.innerHTML = '';
+      evidenceCountBadge.innerText = '0 Snapshots';
+    });
+
+    btnStop.addEventListener('click', () => {
+      game.stop();
+      btnStart.style.display = 'inline-flex';
+      btnStop.style.display = 'none';
+      btnDownloadVideo.style.display = 'inline-flex';
+      btnExportReport.style.display = 'inline-flex';
+    });
+
+    btnDownloadVideo.addEventListener('click', () => {
+      if (game) game.downloadRecordedVideo();
+    });
+
+    btnExportReport.addEventListener('click', () => {
+      if (!game) return;
+      const report = game.exportResult();
+      const val = validateReport(report);
+      if (!val.valid) {
+        alert('Validation errors: ' + val.errors.join(', '));
+      }
+      downloadReportJson(report, 'red-light-result.json');
+    });
+
+    function handleStateChange(state) {
+      // 1. Update Traffic Lights
+      lightRed.classList.remove('active');
+      lightYellow.classList.remove('active');
+      lightGreen.classList.remove('active');
+
+      if (state.currentLight === 'RED') {
+        lightRed.classList.add('active');
+        lightLabel.innerText = 'RED LIGHT';
+        lightLabel.style.color = '#d32f2f';
+      } else if (state.currentLight === 'YELLOW') {
+        lightYellow.classList.add('active');
+        lightLabel.innerText = 'YELLOW LIGHT';
+        lightLabel.style.color = '#f57f17';
+      } else {
+        lightGreen.classList.add('active');
+        lightLabel.innerText = 'GREEN LIGHT';
+        lightLabel.style.color = '#2e7d32';
+      }
+
+      // 2. Update Player Tags
+      playerTagsContainer.innerHTML = '';
+      state.players.forEach(p => {
+        const pill = document.createElement('span');
+        let statusClass = 'green';
+        if (p.isOut) statusClass = 'red';
+        else if (p.strikes > 0) statusClass = 'yellow';
+
+        pill.className = `pill-badge ${statusClass}`;
+        pill.innerHTML = `<strong>${p.name}</strong> • Lane ${p.lane} • Strikes: ${p.strikes}/3 ${p.hasFinished ? '🏆 (Rank ' + p.finishRank + ')' : ''}`;
+        playerTagsContainer.appendChild(pill);
+      });
+
+      // 3. Draw Overlays on Canvas
+      drawOverlay(state);
+
+      if (!state.gameActive && btnStop.style.display !== 'none') {
+        btnStart.style.display = 'inline-flex';
+        btnStop.style.display = 'none';
+        btnDownloadVideo.style.display = 'inline-flex';
+        btnExportReport.style.display = 'inline-flex';
+      }
+    }
+
+    function drawOverlay(state) {
+      const w = overlayCanvas.width;
+      const h = overlayCanvas.height;
+      overlayCtx.clearRect(0, 0, w, h);
+
+      // Draw Lanes
+      overlayCtx.save();
+      overlayCtx.strokeStyle = 'rgba(224, 109, 83, 0.45)';
+      overlayCtx.lineWidth = 2;
+      overlayCtx.setLineDash([8, 6]);
+
+      state.lanes.forEach(lane => {
+        const lx = lane.minX * w;
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(lx, 0);
+        overlayCtx.lineTo(lx, h);
+        overlayCtx.stroke();
+
+        overlayCtx.fillStyle = 'rgba(224, 109, 83, 0.9)';
+        overlayCtx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
+        overlayCtx.fillText(`Lane ${lane.index}`, lx + 8, 24);
+      });
+
+      // Draw Finish Line
+      const fy = state.finishLineY * h;
+      overlayCtx.strokeStyle = '#2e7d32';
+      overlayCtx.lineWidth = 3;
+      overlayCtx.setLineDash([6, 6]);
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(0, fy);
+      overlayCtx.lineTo(w, fy);
+      overlayCtx.stroke();
+
+      overlayCtx.fillStyle = '#2e7d32';
+      overlayCtx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
+      overlayCtx.fillText('FINISH LINE (HIP HEIGHT)', 12, fy - 6);
+      overlayCtx.restore();
+
+      // Draw Player Boxes
+      state.players.forEach(p => {
+        if (!p.boundingBox) return;
+        const bx = p.boundingBox.x * w;
+        const by = p.boundingBox.y * h;
+        const bw = p.boundingBox.width * w;
+        const bh = p.boundingBox.height * h;
+
+        overlayCtx.save();
+        overlayCtx.strokeStyle = p.isOut ? '#ba1a1a' : (p.strikes > 0 ? '#dda74f' : '#536251');
+        overlayCtx.lineWidth = 2.5;
+        overlayCtx.strokeRect(bx, by, bw, bh);
+
+        // Name tag
+        overlayCtx.fillStyle = p.isOut ? 'rgba(186, 26, 26, 0.85)' : 'rgba(83, 98, 81, 0.85)';
+        overlayCtx.fillRect(bx, Math.max(0, by - 22), 110, 22);
+        overlayCtx.fillStyle = '#ffffff';
+        overlayCtx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+        overlayCtx.fillText(`${p.name} [S:${p.strikes}]`, bx + 6, Math.max(15, by - 6));
+        overlayCtx.restore();
+      });
+    }
+
+    function renderEvidenceCard(evRecord) {
+      const card = document.createElement('div');
+      card.className = 'polaroid-card';
+      card.innerHTML = `
+        <img src="${evRecord.imageUri}" class="polaroid-img" alt="${evRecord.title}"/>
+        <div class="polaroid-caption">${evRecord.reason}</div>
+        <div class="polaroid-meta">${evRecord.player} • ${new Date(evRecord.timestamp).toLocaleTimeString()}</div>
+      `;
+      evidenceGrid.prepend(card);
+      evidenceCountBadge.innerText = `${document.querySelectorAll('.polaroid-card').length} Snapshots`;
+    }
+
+    function renderLanes() {
+      if (game) {
+        handleStateChange(game.getState());
+      }
+    }
+
+    setupCamera();
+  </script>
+</body>
+</html>

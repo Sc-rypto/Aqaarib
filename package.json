@@ -1,0 +1,19 @@
+{
+  "name": "vision-family-games",
+  "version": "1.0.0",
+  "description": "Shared vision layer, Red Light, and Hot Potato family motion games (Person B)",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "validate": "node dev/validateReport.js"
+  },
+  "keywords": [
+    "mediapipe",
+    "pose-estimation",
+    "kinship",
+    "games",
+    "family-hub"
+  ],
+  "author": "Person B",
+  "license": "MIT"
+}
