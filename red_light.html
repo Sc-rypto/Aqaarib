@@ -56,9 +56,36 @@
     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.75rem;" id="mainGrid">
       <!-- Camera & Overlay Viewport -->
       <div class="kinship-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
-        <div class="camera-viewport-wrap" id="viewportWrap">
+        <div class="camera-viewport-wrap arena-wrap" id="viewportWrap">
           <video id="webcamVideo" playsinline muted autoplay></video>
           <canvas id="overlayCanvas"></canvas>
+
+          <!-- Floating Catch Alert Banner -->
+          <div id="caughtBanner" class="caught-alert-banner" style="display: none;">
+            <span class="material-symbols-outlined">warning</span>
+            <span id="caughtBannerText">VIOLATION CAUGHT! MOVED ON RED!</span>
+          </div>
+
+          <!-- Winner Celebration Card Overlay -->
+          <div id="winnerCelebrationModal" class="winner-celebration-card" style="display: none;">
+            <div style="font-size: 3.8rem; margin-bottom: 0.4rem; animation: bounce 1s infinite alternate;">🏆</div>
+            <h2 style="font-family: var(--font-serif); font-size: 2.3rem; margin-bottom: 0.35rem; color: #2e7d32;" id="winnerTitle">
+              WINNER CROSSED THE FINISH LINE!
+            </h2>
+            <p style="font-size: 1.05rem; color: var(--on-surface-variant); max-width: 460px; margin-bottom: 1.5rem; line-height: 1.45;" id="winnerSubtitle">
+              Outstanding run! Reached the finish line with clean lane adherence.
+            </p>
+            <div style="display: flex; gap: 0.85rem; flex-wrap: wrap; justify-content: center;">
+              <button id="btnPlayAgain" class="btn-primary" style="padding: 0.8rem 1.6rem;">
+                <span class="material-symbols-outlined">replay</span>
+                Play Again
+              </button>
+              <button id="btnWinnerDownloadVideo" class="btn-secondary" style="padding: 0.8rem 1.4rem;">
+                <span class="material-symbols-outlined">download</span>
+                Download Session Video
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Live Player Status Strip -->
@@ -67,7 +94,7 @@
             <!-- Dynamic player strike pills -->
           </div>
           <div style="font-family: var(--font-label); font-size: 0.82rem; color: var(--on-surface-variant);" id="systemInfo">
-            Vision: Ready
+            Vision: Initializing...
           </div>
         </div>
       </div>
@@ -97,9 +124,9 @@
             <span>Finish Line Height</span>
             <span id="finishLineVal">80% (Near Camera)</span>
           </div>
-          <input type="range" id="finishSlider" min="55" max="92" value="80" style="width: 100%; accent-color: var(--primary-accent); cursor: pointer;"/>
+          <input type="range" id="finishSlider" min="50" max="92" value="80" style="width: 100%; accent-color: var(--primary-accent); cursor: pointer;"/>
           <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--on-surface-variant); margin-top: 0.2rem;">
-            <span>Further Back (55%)</span>
+            <span>Further Back (50%)</span>
             <span>Closer to Camera (92%)</span>
           </div>
         </div>
@@ -227,6 +254,8 @@
   <script src="js/background.js"></script>
   <script type="module">
     import { RedLightGame } from './games/red_light.js';
+    import { poseTracker } from './vision/poseTracker.js';
+    import { getLaneBoundaries } from './games/logic/redLight.js';
     import { inputSource } from './dev/stubs/inputSource.js';
     import { downloadReportJson, validateReport } from './dev/stubs/report.js';
 
@@ -240,6 +269,13 @@
     const overlayCanvas = document.getElementById('overlayCanvas');
     const overlayCtx = overlayCanvas.getContext('2d');
     const viewportWrap = document.getElementById('viewportWrap');
+    const caughtBanner = document.getElementById('caughtBanner');
+    const caughtBannerText = document.getElementById('caughtBannerText');
+    const winnerModal = document.getElementById('winnerCelebrationModal');
+    const winnerTitle = document.getElementById('winnerTitle');
+    const winnerSubtitle = document.getElementById('winnerSubtitle');
+    const btnPlayAgain = document.getElementById('btnPlayAgain');
+    const btnWinnerDownloadVideo = document.getElementById('btnWinnerDownloadVideo');
 
     const lightRed = document.getElementById('lightRed');
     const lightYellow = document.getElementById('lightYellow');
@@ -264,6 +300,11 @@
     let finishLineY = 0.80;
     let numLanes = 3;
     let isBriefing = false;
+    let animFrameId = null;
+    let lastDetectedPeople = [];
+    let recentCaughtViolations = {}; // playerId -> { time, strikes, reason }
+    let caughtBannerTimeout = null;
+    let cachedGameState = null;
 
     async function setupCamera() {
       try {
@@ -284,16 +325,235 @@
           numLanes,
           finishLineY,
           onStateChange: handleStateChange,
+          onEvent: handleGameEvent,
           onEvidenceCaptured: renderEvidenceCard
         });
 
         await game.init(videoEl);
-        document.getElementById('systemInfo').innerText = 'Vision: Ready (~15 FPS)';
-        drawOverlay(game.getState());
+        document.getElementById('systemInfo').innerText = 'Vision: Active (Constant Real-time Tracking)';
+
+        // Start continuous live tracking & rendering loop
+        startContinuousTrackingLoop();
       } catch (err) {
         document.getElementById('systemInfo').innerText = 'Camera Error: ' + err.message;
       }
     }
+
+    function startContinuousTrackingLoop() {
+      function renderStep(now) {
+        if (videoEl && videoEl.readyState >= 2) {
+          // Detect poses continuously
+          const people = poseTracker.detect(videoEl, now);
+          if (people && people.length > 0) {
+            lastDetectedPeople = people;
+          }
+          drawContinuousOverlay(now);
+        }
+        animFrameId = requestAnimationFrame(renderStep);
+      }
+      animFrameId = requestAnimationFrame(renderStep);
+    }
+
+    function drawContinuousOverlay(now) {
+      const w = overlayCanvas.width;
+      const h = overlayCanvas.height;
+      overlayCtx.clearRect(0, 0, w, h);
+
+      // 1. Draw Vertical Lanes
+      const lanes = getLaneBoundaries(numLanes);
+      overlayCtx.save();
+      overlayCtx.strokeStyle = 'rgba(224, 109, 83, 0.45)';
+      overlayCtx.lineWidth = 2.5;
+      overlayCtx.setLineDash([8, 6]);
+
+      lanes.forEach(lane => {
+        const lx = lane.minX * w;
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(lx, 0);
+        overlayCtx.lineTo(lx, h);
+        overlayCtx.stroke();
+
+        overlayCtx.fillStyle = 'rgba(224, 109, 83, 0.92)';
+        overlayCtx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
+        overlayCtx.fillText(`Lane ${lane.index}`, lx + 8, 22);
+      });
+      overlayCtx.restore();
+
+      // 2. Draw Finish Line Banner (moves directly with finishLineY)
+      const fy = finishLineY * h;
+      overlayCtx.save();
+      overlayCtx.strokeStyle = '#2e7d32';
+      overlayCtx.lineWidth = 4.5;
+      overlayCtx.setLineDash([12, 6]);
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(0, fy);
+      overlayCtx.lineTo(w, fy);
+      overlayCtx.stroke();
+
+      overlayCtx.fillStyle = 'rgba(46, 125, 50, 0.95)';
+      overlayCtx.fillRect(10, Math.max(0, fy - 26), 225, 26);
+      overlayCtx.fillStyle = '#ffffff';
+      overlayCtx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
+      overlayCtx.fillText('🏁 FINISH LINE (CROSS HERE)', 18, Math.max(16, fy - 8));
+      overlayCtx.restore();
+
+      // 3. Draw Constant Tracking Boxes on All Detected People
+      const people = lastDetectedPeople || [];
+      const currentLight = cachedGameState?.currentLight || 'GREEN';
+      const isGameRunning = game && game.gameActive;
+
+      people.forEach((p, idx) => {
+        if (!p.boundingBox) return;
+        const bx = p.boundingBox.x * w;
+        const by = p.boundingBox.y * h;
+        const bw = p.boundingBox.width * w;
+        const bh = p.boundingBox.height * h;
+
+        // Match to player
+        const matchedPlayer = (cachedGameState?.players || []).find(player => {
+          if (player.boundingBox) {
+            return Math.abs(player.boundingBox.x - p.boundingBox.x) < 0.12;
+          }
+          return player.lane === (idx + 1);
+        }) || { name: `Player ${idx + 1}`, strikes: 0, hasFinished: false };
+
+        const isCaught = recentCaughtViolations[matchedPlayer.id] && (Date.now() - recentCaughtViolations[matchedPlayer.id].time < 2200);
+        const isFinished = matchedPlayer.hasFinished;
+
+        let strokeColor = '#2e7d32';
+        let statusText = `[ADVANCING]`;
+
+        if (isCaught) {
+          strokeColor = '#d32f2f';
+          statusText = `🚨 CAUGHT MOVING ON RED!`;
+        } else if (isFinished) {
+          strokeColor = '#fbc02d';
+          statusText = `🏆 WINNER! Crossed Line`;
+        } else if (!isGameRunning) {
+          strokeColor = '#e06d53';
+          statusText = `🎯 TRACKING ACTIVE`;
+        } else if (currentLight === 'RED') {
+          strokeColor = '#00897b';
+          statusText = `🧊 FROZEN (SAFE)`;
+        } else if (currentLight === 'YELLOW') {
+          strokeColor = '#f57f17';
+          statusText = `🚶 SLOW MOTION`;
+        }
+
+        overlayCtx.save();
+
+        // Translucent highlight fill
+        overlayCtx.fillStyle = isCaught ? 'rgba(211, 47, 47, 0.22)' : (strokeColor === '#2e7d32' ? 'rgba(46, 125, 50, 0.10)' : 'rgba(224, 109, 83, 0.10)');
+        overlayCtx.fillRect(bx, by, bw, bh);
+
+        // Futuristic corner brackets
+        overlayCtx.strokeStyle = strokeColor;
+        overlayCtx.lineWidth = isCaught ? 4.5 : 3;
+        const bracketLen = Math.min(22, bw * 0.25, bh * 0.25);
+
+        // Top-left
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(bx, by + bracketLen);
+        overlayCtx.lineTo(bx, by);
+        overlayCtx.lineTo(bx + bracketLen, by);
+        overlayCtx.stroke();
+
+        // Top-right
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(bx + bw - bracketLen, by);
+        overlayCtx.lineTo(bx + bw, by);
+        overlayCtx.lineTo(bx + bw, by + bracketLen);
+        overlayCtx.stroke();
+
+        // Bottom-left
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(bx, by + bh - bracketLen);
+        overlayCtx.lineTo(bx, by + bh);
+        overlayCtx.lineTo(bx + bracketLen, by + bh);
+        overlayCtx.stroke();
+
+        // Bottom-right
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(bx + bw - bracketLen, by + bh);
+        overlayCtx.lineTo(bx + bw, by + bh);
+        overlayCtx.lineTo(bx + bw, by + bh - bracketLen);
+        overlayCtx.stroke();
+
+        // Connecting box outline
+        overlayCtx.lineWidth = 1;
+        overlayCtx.strokeRect(bx, by, bw, bh);
+
+        // Reticle target on torso / upper body
+        const cx = (p.torsoCenter?.x || (p.boundingBox.x + p.boundingBox.width / 2)) * w;
+        const cy = (p.torsoCenter?.y || (p.boundingBox.y + p.boundingBox.height * 0.35)) * h;
+        overlayCtx.beginPath();
+        overlayCtx.arc(cx, cy, 6, 0, Math.PI * 2);
+        overlayCtx.stroke();
+
+        // HUD Status Tag
+        const tagText = `${matchedPlayer.name} • ${statusText}`;
+        overlayCtx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+        const tagW = Math.max(140, overlayCtx.measureText(tagText).width + 20);
+        const tagH = 24;
+        const tagY = Math.max(4, by - tagH - 4);
+
+        overlayCtx.fillStyle = strokeColor;
+        overlayCtx.fillRect(bx, tagY, tagW, tagH);
+
+        overlayCtx.fillStyle = '#ffffff';
+        overlayCtx.fillText(tagText, bx + 8, tagY + 16);
+
+        overlayCtx.restore();
+      });
+    }
+
+    function handleGameEvent(evt) {
+      if (evt.type === 'STRIKE') {
+        recentCaughtViolations[evt.playerId] = {
+          time: Date.now(),
+          strikes: evt.strikes,
+          reason: evt.reason
+        };
+
+        // Trigger full display red flash
+        viewportWrap.classList.remove('catch-flash-red');
+        void viewportWrap.offsetWidth; // Force CSS reflow
+        viewportWrap.classList.add('catch-flash-red');
+
+        // Show floating catch banner
+        caughtBannerText.innerText = `🚨 VIOLATION CAUGHT! ${evt.playerName.toUpperCase()} MOVED ON RED! (STRIKE ${evt.strikes}/3)`;
+        caughtBanner.style.display = 'flex';
+
+        if (caughtBannerTimeout) clearTimeout(caughtBannerTimeout);
+        caughtBannerTimeout = setTimeout(() => {
+          caughtBanner.style.display = 'none';
+          viewportWrap.classList.remove('catch-flash-red');
+        }, 2200);
+      } else if (evt.type === 'FINISH' || evt.type === 'GAME_OVER') {
+        const winnerName = evt.winner?.playerName || evt.playerName || 'Player';
+        const rank = evt.rank || 1;
+
+        winnerTitle.innerText = `🏆 CONGRATULATIONS, ${winnerName.toUpperCase()}!`;
+        winnerSubtitle.innerText = `You crossed the finish line in Rank #${rank}! Clean lane adherence and brilliant timing!`;
+        winnerModal.style.display = 'flex';
+
+        btnPlayGame.style.display = 'inline-flex';
+        btnStop.style.display = 'none';
+        btnDownloadVideo.style.display = 'inline-flex';
+        btnExportReport.style.display = 'inline-flex';
+      }
+    }
+
+    btnPlayAgain.addEventListener('click', () => {
+      winnerModal.style.display = 'none';
+      game.start();
+      btnPlayGame.style.display = 'none';
+      btnStop.style.display = 'inline-flex';
+    });
+
+    btnWinnerDownloadVideo.addEventListener('click', () => {
+      if (game) game.downloadRecordedVideo();
+    });
 
     document.querySelectorAll('.lane-select-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -306,7 +566,6 @@
         numLanes = parseInt(btn.dataset.lanes, 10);
         if (game) {
           game.setNumLanes(numLanes);
-          drawOverlay(game.getState());
         }
       });
     });
@@ -316,7 +575,6 @@
       finishLineVal.innerText = `${e.target.value}%`;
       if (game) {
         game.setFinishLine(finishLineY);
-        drawOverlay(game.getState());
       }
     });
 
@@ -343,6 +601,7 @@
     });
 
     btnPlayGame.addEventListener('click', async () => {
+      winnerModal.style.display = 'none';
       briefingModal.style.display = 'flex';
       isBriefing = true;
 
@@ -365,6 +624,7 @@
     function closeBriefingAndStart() {
       isBriefing = false;
       briefingModal.style.display = 'none';
+      winnerModal.style.display = 'none';
       game.start();
 
       btnPlayGame.style.display = 'none';
@@ -395,22 +655,31 @@
     });
 
     function handleStateChange(state) {
+      cachedGameState = state;
+
+      // 1. Update Traffic Signal Light bulbs
       lightRed.classList.remove('active');
       lightYellow.classList.remove('active');
       lightGreen.classList.remove('active');
+
+      // 2. Update Ambient Display Glow
+      viewportWrap.classList.remove('arena-ambient-green', 'arena-ambient-yellow', 'arena-ambient-red');
 
       if (state.currentLight === 'RED') {
         lightRed.classList.add('active');
         lightLabel.innerText = 'RED LIGHT - FREEZE';
         lightLabel.style.color = '#d32f2f';
+        viewportWrap.classList.add('arena-ambient-red');
       } else if (state.currentLight === 'YELLOW') {
         lightYellow.classList.add('active');
         lightLabel.innerText = 'YELLOW LIGHT - SLOW';
         lightLabel.style.color = '#f57f17';
+        viewportWrap.classList.add('arena-ambient-yellow');
       } else {
         lightGreen.classList.add('active');
         lightLabel.innerText = 'GREEN LIGHT - ADVANCE';
         lightLabel.style.color = '#2e7d32';
+        viewportWrap.classList.add('arena-ambient-green');
       }
 
       playerTagsContainer.innerHTML = '';
@@ -425,76 +694,12 @@
         playerTagsContainer.appendChild(pill);
       });
 
-      drawOverlay(state);
-
       if (!state.gameActive && btnStop.style.display !== 'none') {
         btnPlayGame.style.display = 'inline-flex';
         btnStop.style.display = 'none';
         btnDownloadVideo.style.display = 'inline-flex';
         btnExportReport.style.display = 'inline-flex';
       }
-    }
-
-    function drawOverlay(state) {
-      const w = overlayCanvas.width;
-      const h = overlayCanvas.height;
-      overlayCtx.clearRect(0, 0, w, h);
-
-      // 1. Draw Vertical Lanes
-      overlayCtx.save();
-      overlayCtx.strokeStyle = 'rgba(224, 109, 83, 0.55)';
-      overlayCtx.lineWidth = 2.5;
-      overlayCtx.setLineDash([8, 6]);
-
-      state.lanes.forEach(lane => {
-        const lx = lane.minX * w;
-        overlayCtx.beginPath();
-        overlayCtx.moveTo(lx, 0);
-        overlayCtx.lineTo(lx, h);
-        overlayCtx.stroke();
-
-        overlayCtx.fillStyle = 'rgba(224, 109, 83, 0.95)';
-        overlayCtx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
-        overlayCtx.fillText(`Lane ${lane.index}`, lx + 8, 24);
-      });
-
-      // 2. Draw Finish Line Banner (Across exact finishLineY coordinate)
-      const fy = state.finishLineY * h;
-      overlayCtx.strokeStyle = '#2e7d32';
-      overlayCtx.lineWidth = 4;
-      overlayCtx.setLineDash([10, 6]);
-      overlayCtx.beginPath();
-      overlayCtx.moveTo(0, fy);
-      overlayCtx.lineTo(w, fy);
-      overlayCtx.stroke();
-
-      overlayCtx.fillStyle = 'rgba(46, 125, 50, 0.92)';
-      overlayCtx.fillRect(10, fy - 24, 210, 24);
-      overlayCtx.fillStyle = '#ffffff';
-      overlayCtx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
-      overlayCtx.fillText('🏁 FINISH LINE (HIP HEIGHT)', 16, fy - 7);
-      overlayCtx.restore();
-
-      // 3. Draw Player Boxes
-      state.players.forEach(p => {
-        if (!p.boundingBox) return;
-        const bx = p.boundingBox.x * w;
-        const by = p.boundingBox.y * h;
-        const bw = p.boundingBox.width * w;
-        const bh = p.boundingBox.height * h;
-
-        overlayCtx.save();
-        overlayCtx.strokeStyle = p.isOut ? '#d32f2f' : (p.strikes > 0 ? '#f57f17' : '#2e7d32');
-        overlayCtx.lineWidth = 3;
-        overlayCtx.strokeRect(bx, by, bw, bh);
-
-        overlayCtx.fillStyle = p.isOut ? 'rgba(211, 47, 47, 0.92)' : 'rgba(46, 125, 50, 0.92)';
-        overlayCtx.fillRect(bx, Math.max(0, by - 24), 130, 24);
-        overlayCtx.fillStyle = '#ffffff';
-        overlayCtx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
-        overlayCtx.fillText(`${p.name} [Strikes: ${p.strikes}]`, bx + 6, Math.max(16, by - 7));
-        overlayCtx.restore();
-      });
     }
 
     function renderEvidenceCard(evRecord) {

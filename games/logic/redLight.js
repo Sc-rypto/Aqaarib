@@ -55,14 +55,30 @@ export function isInsideLane(torsoX, assignedLane, numLanes = 3, padding = 0.02)
   return torsoX >= (lane.minX - padding) && torsoX <= (lane.maxX + padding);
 }
 
-export function checkMidHipFinish(landmarks, finishLineY = 0.80) {
-  if (!landmarks || landmarks.length < 25) return false;
-  const leftHip = landmarks[23];
-  const rightHip = landmarks[24];
-  if (!leftHip || !rightHip) return false;
+export function checkMidHipFinish(landmarks, finishLineY = 0.80, boundingBox = null, torsoCenter = null) {
+  // 1. Check MediaPipe mid-hip landmarks if present
+  if (landmarks && landmarks.length >= 25) {
+    const leftHip = landmarks[23];
+    const rightHip = landmarks[24];
+    if (leftHip && rightHip && leftHip.y !== undefined && rightHip.y !== undefined) {
+      const midHipY = (leftHip.y + rightHip.y) / 2;
+      if (midHipY >= finishLineY) return true;
+    }
+  }
 
-  const midHipY = (leftHip.y + rightHip.y) / 2;
-  return midHipY >= finishLineY;
+  // 2. Check torso center if available (torso center is anatomically higher than hips by ~0.10)
+  if (torsoCenter && torsoCenter.y !== undefined && torsoCenter.y !== null) {
+    if (torsoCenter.y >= finishLineY - 0.10) return true;
+  }
+
+  // 3. Check bounding box lower boundary (person has advanced to finish line)
+  if (boundingBox && boundingBox.y !== undefined && boundingBox.height !== undefined) {
+    const bottomY = boundingBox.y + boundingBox.height;
+    if (bottomY >= finishLineY) return true;
+    if (boundingBox.height >= 0.70 && boundingBox.y >= 0.08) return true;
+  }
+
+  return false;
 }
 
 export function generatePlainReason({ playerName, type, light, motion, limit, durationSec }) {
@@ -167,8 +183,8 @@ export class RedLightJudge {
 
       state.lastSeenTimeMs = timestampMs;
 
-      // 1. Check Finish Line
-      if (checkMidHipFinish(playerInput.landmarks, this.finishLineY)) {
+      // 1. Check Finish Line (hips, torso center, or bounding box)
+      if (checkMidHipFinish(playerInput.landmarks, this.finishLineY, playerInput.boundingBox, playerInput.torsoCenter)) {
         state.hasFinished = true;
         this.finishOrder.push(state.id);
         state.finishRank = this.finishOrder.length;

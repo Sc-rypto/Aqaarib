@@ -194,24 +194,39 @@ export class RedLightGame {
     if (!this.gameActive || !this.videoElement) return;
 
     const detectedPeople = poseTracker.detect(this.videoElement, timestampMs);
+    this.lastDetectedPeople = detectedPeople;
     const laneBounds = getLaneBoundaries(this.numLanes);
 
-    const playerInputs = this.players.map(player => {
+    // Track which detected person is assigned to avoid duplicate mapping
+    const assignedPersonIndices = new Set();
+
+    const playerInputs = this.players.map((player, pIdx) => {
       const assignedLane = player.lane;
       const targetLaneObj = laneBounds.find(l => l.index === assignedLane);
+      const targetCenterX = targetLaneObj ? targetLaneObj.centerX : 0.5;
 
       let bestPerson = null;
+      let bestIndex = -1;
       let minDistance = Infinity;
 
-      for (const p of detectedPeople) {
-        const dist = Math.abs(p.torsoCenter.x - (targetLaneObj ? targetLaneObj.centerX : 0.5));
-        if (dist < minDistance && dist < 0.45) {
-          minDistance = dist;
-          bestPerson = p;
-        }
+      // In single detected person mode, map directly to the player in that lane or player 1
+      if (detectedPeople.length === 1 && (pIdx === 0 || Math.abs(detectedPeople[0].torsoCenter.x - targetCenterX) < 0.35)) {
+        bestPerson = detectedPeople[0];
+        bestIndex = 0;
+      } else {
+        detectedPeople.forEach((p, idx) => {
+          if (assignedPersonIndices.has(idx)) return;
+          const dist = Math.abs(p.torsoCenter.x - targetCenterX);
+          if (dist < minDistance && dist < 0.45) {
+            minDistance = dist;
+            bestPerson = p;
+            bestIndex = idx;
+          }
+        });
       }
 
       if (bestPerson) {
+        if (bestIndex !== -1) assignedPersonIndices.add(bestIndex);
         const motion = this.motionTracker.update(player.id, bestPerson.landmarks);
         return {
           id: player.id,
@@ -246,25 +261,53 @@ export class RedLightGame {
 
     verdict.newStrikes.forEach(strike => {
       this._captureEvidenceForStrike(strike, playerInputs);
-      audio.beep({ frequency: 220, duration: 0.3, type: 'sawtooth' });
-      audio.speak(`${strike.playerName}! Strike!`);
-      this.onEvent(strike);
+      audio.beep({ frequency: 180, duration: 0.45, type: 'sawtooth' });
+      audio.speak(`${strike.playerName}! Freeze! Caught moving on red!`);
+      this.lastCatchEvent = {
+        playerId: strike.playerId,
+        playerName: strike.playerName,
+        timestampMs: performance.now(),
+        reason: strike.reason,
+        strikes: strike.strikes
+      };
+      this.onEvent({
+        type: 'STRIKE',
+        isCatch: true,
+        ...strike
+      });
     });
 
     verdict.newFinishes.forEach(fin => {
       this._captureEvidenceForFinish(fin, playerInputs);
-      audio.beep({ frequency: 880, duration: 0.3, type: 'sine' });
+      audio.beep({ frequency: 880, duration: 0.35, type: 'sine' });
       audio.speak(`${fin.playerName} crossed the finish line! Rank ${fin.rank}!`);
-      this.onEvent(fin);
+      this.lastWinnerEvent = {
+        playerId: fin.playerId,
+        playerName: fin.playerName,
+        rank: fin.rank,
+        timestampMs: performance.now(),
+        reason: fin.reason
+      };
+      this.onEvent({
+        type: 'FINISH',
+        isWinner: fin.rank === 1,
+        ...fin
+      });
     });
 
-    const activeRemaining = this.players.filter(p => {
+    // Check game over: only evaluate players who were actually present in front of camera
+    const seenPlayers = this.players.filter(p => {
+      const state = this.judge.playerStates[p.id];
+      return state && state.lastSeenTimeMs;
+    });
+
+    const activeRemaining = (seenPlayers.length > 0 ? seenPlayers : this.players).filter(p => {
       const state = this.judge.playerStates[p.id];
       return state && !state.isOut && !state.hasFinished;
     });
 
-    if (activeRemaining.length === 0) {
-      this._handleGameOver();
+    if (activeRemaining.length === 0 && (seenPlayers.length > 0 || this.judge.finishOrder.length > 0)) {
+      this._handleGameOver(verdict.newFinishes[0] || this.lastWinnerEvent);
     }
 
     this.onStateChange(this.getState(playerInputs));
@@ -328,21 +371,37 @@ export class RedLightGame {
     this.onEvidenceCaptured(evRecord);
   }
 
-  _handleGameOver() {
+  _handleGameOver(winnerFinish = null) {
     this.gameActive = false;
     this.stopRecording();
     if (this.nextLightChangeTimer) {
       clearTimeout(this.nextLightChangeTimer);
+      this.nextLightChangeTimer = null;
     }
     if (this.gameLoop) {
       this.gameLoop.stop();
+      this.gameLoop = null;
     }
 
-    audio.speak('Game over! All lane positions resolved.');
-    audio.beep({ frequency: 659.25, duration: 0.5 });
+    const winnerName = winnerFinish?.playerName || (this.judge?.finishOrder[0] ? this.players.find(p => p.id === this.judge.finishOrder[0])?.name : null);
+    if (winnerName) {
+      audio.speak(`Winner! ${winnerName} has won the match! Excellent game!`);
+    } else {
+      audio.speak('Round complete! All player positions recorded.');
+    }
+
+    // Play fanfare
+    audio.beep({ frequency: 523.25, duration: 0.15 });
+    setTimeout(() => audio.beep({ frequency: 659.25, duration: 0.15 }), 160);
+    setTimeout(() => audio.beep({ frequency: 783.99, duration: 0.35 }), 320);
 
     const finalReport = this.exportResult();
-    this.onEvent({ type: 'GAME_OVER', report: finalReport });
+    this.onEvent({
+      type: 'GAME_OVER',
+      winner: winnerName,
+      winnerRank: 1,
+      report: finalReport
+    });
     this.onStateChange(this.getState());
   }
 
@@ -419,6 +478,9 @@ export class RedLightGame {
         };
       }),
       finishOrder: this.judge?.finishOrder || [],
+      lastCatch: this.lastCatchEvent && (performance.now() - this.lastCatchEvent.timestampMs < 2500) ? this.lastCatchEvent : null,
+      lastWinner: this.lastWinnerEvent || null,
+      detectedPeople: this.lastDetectedPeople || [],
       scores: this.judge ? this.judge.evaluateFrame({
         timestampMs: performance.now(),
         currentLight: this.currentLight,

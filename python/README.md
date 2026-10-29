@@ -1,6 +1,6 @@
 # Majlis Judge - Video Referee & Rule Enforcement Engine
 
-**Person C Deliverable | ADU Hackathon 2026**
+**Aqaarib Motion Gaming Suite**
 
 Majlis Judge is a lightweight, edge-compatible video referee designed to process recorded game footage, enforce formal family game rules, and generate cryptographically signed HMAC-SHA256 reports that can be verified by the Aqaarib Kinship web app.
 

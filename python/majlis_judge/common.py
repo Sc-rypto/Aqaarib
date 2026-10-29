@@ -401,7 +401,7 @@ def create_report(
         "evidence": evidence,
         "winner": winner,
         "meta": {
-            "generatedBy": "Person C (Majlis Judge)",
+            "generatedBy": "Aqaarib Match Judge",
             "visionModel": "Ultralytics YOLOv8n + ByteTrack / ColorTracker",
             **(meta or {}),
         },
