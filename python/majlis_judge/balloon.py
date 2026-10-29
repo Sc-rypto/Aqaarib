@@ -231,7 +231,7 @@ class BalloonReferee:
             is_valid = (apex_y <= target_px)
             if is_valid:
                 valid_hits_count += 1
-                reason = (
+                reason = clean_referee_reason(
                     f"Valid hit! Balloon reached apex at y={apex_y/frame_height:.2f}, "
                     f"clearing target line ({self.target_y:.2f})."
                 )
@@ -248,7 +248,7 @@ class BalloonReferee:
                 })
             else:
                 faults_count += 1
-                reason = (
+                reason = clean_referee_reason(
                     f"Fault! Hit reached apex at y={apex_y/frame_height:.2f}, "
                     f"failing to clear target line ({self.target_y:.2f})."
                 )
@@ -270,7 +270,7 @@ class BalloonReferee:
                 "type": "GROUND_CONTACT",
                 "timestampSec": round(float(ground_contact_time), 2),
                 "groundYNorm": self.ground_y,
-                "reason": termination_reason,
+                "reason": clean_referee_reason(termination_reason),
                 "frameIdx": effective_points[-1]["frame_idx"],
                 "pt": effective_points[-1],
             })
